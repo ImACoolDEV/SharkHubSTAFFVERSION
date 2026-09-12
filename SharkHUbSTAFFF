@@ -1,4 +1,4 @@
--- Shark Hub V3.49 | Staff Edition (Lighter Emerald Theme & Debug Auto Pickup)
+-- Shark Hub V3.49 | Staff Edition (Instant Workspace.Drops Magnet & Debug Auto Pickup)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -51,7 +51,7 @@ local TRIGGERBOT_ENABLED = false
 local AUTO_ESCAPE_ENABLED = false
 local BRING_RAKOOF_ENABLED = false
 local FORCE_DROP_ENABLED = false
-local USE_WHITELIST = true
+local USE_WHITELIST = false -- Set to false by default so ALL items in Drops are pulled instantly
 
 -- Luck Boost States
 local LUCK_250_ENABLED = false
@@ -63,7 +63,7 @@ local TOGGLE_KEY = Enum.KeyCode.RightControl
 
 -- Connections
 local aiBattleLoop, attackLoop, bringLoop, hitboxLoop, noclipConnection
-local pickupLoop, triggerBotConnection, escapeConnection, bringRakoofLoop, forceDropLoop
+local pickupLoop, childAddedConnection, triggerBotConnection, escapeConnection, bringRakoofLoop, forceDropLoop
 local luck250Loop, luck500Loop, luck750Loop, luck1000Loop, dropRadarLoop
 
 --------------------------------------------------------------------------------
@@ -140,6 +140,48 @@ local function executeSpamClick()
     if character then
         local tool = character:FindFirstChildOfClass("Tool")
         if tool then tool:Activate() end
+    end
+end
+
+--------------------------------------------------------------------------------
+-- UNIVERSAL ITEM BRINGER HELPER FOR WORKSPACE.DROPS
+--------------------------------------------------------------------------------
+local function bringDropToPlayer(obj)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    -- Filter Check
+    if USE_WHITELIST then
+        local matched = false
+        for targetName, _ in pairs(TARGET_ITEMS_LOOKUP) do
+            if string.find(string.lower(obj.Name), string.lower(targetName)) then
+                matched = true
+                break
+            end
+        end
+        if not matched then return end
+    end
+
+    -- Process single part or all parts inside model/tool
+    local function pullPart(part)
+        if part:IsA("BasePart") then
+            part.CFrame = hrp.CFrame
+            if firetouchinterest then
+                firetouchinterest(hrp, part, 0)
+                firetouchinterest(hrp, part, 1)
+            end
+        end
+    end
+
+    if obj:IsA("BasePart") then
+        pullPart(obj)
+    else
+        for _, descendant in ipairs(obj:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                pullPart(descendant)
+            end
+        end
     end
 end
 
@@ -534,7 +576,7 @@ local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 
 local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 16, false)
 local StaminaBtn, _, StaminaGrad = CreateStaffButton("⚡ MAX STAMINA (SET REMOTES)", 17, false)
 local PredictDropBtn, _, PredictDropGrad = CreateStaffButton("🔮 CHECK NEXT ITEM DROP", 18, false)
-local PickupFilterBtn, PickupFilterStroke, PickupFilterGrad = CreateStaffButton("🎯 PICKUP FILTER (WHITE/BLACK): ON", 19, true)
+local PickupFilterBtn, PickupFilterStroke, PickupFilterGrad = CreateStaffButton("🎯 PICKUP FILTER (WHITE/BLACK): OFF", 19, false)
 local ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad = CreateStaffButton("🔮 TOGGLE DROP RADAR GUI: ON", 20, true)
 local DebugPickupBtn, DebugPickupStroke, DebugPickupGrad = CreateStaffButton("🐛 DEBUG AUTO PICKUP", 21, false)
 
@@ -555,6 +597,7 @@ ToggleRadarBtn.MouseButton1Click:Connect(function()
     ToggleRadarStroke.Color = RadarFrame.Visible and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 end)
 
+-- ENHANCED AUTO PICKUP & DROPS MAGNET
 AutoPickupBtn.MouseButton1Click:Connect(function()
     AUTO_PICKUP_ENABLED = not AUTO_PICKUP_ENABLED
     AutoPickupBtn.Text = AUTO_PICKUP_ENABLED and "🎁 Golden Staff Auto Pickup: ON" or "🎁 Golden Staff Auto Pickup: OFF"
@@ -562,42 +605,23 @@ AutoPickupBtn.MouseButton1Click:Connect(function()
     AutoPickupStroke.Color = AUTO_PICKUP_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     if AUTO_PICKUP_ENABLED then
+        local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace
+
+        -- 1. Heartbeat Loop for continuously checking existing drops inside Drops folder
         pickupLoop = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-            local hrp = char.HumanoidRootPart
-
-            local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace
-            for _, obj in ipairs(dropsFolder:GetChildren()) do
-                local itemName = obj.Name
-                local matched = false
-
-                if USE_WHITELIST then
-                    for targetName, _ in pairs(TARGET_ITEMS_LOOKUP) do
-                        if string.find(string.lower(itemName), string.lower(targetName)) then
-                            matched = true
-                            break
-                        end
-                    end
-                else
-                    matched = true
-                end
-
-                if matched then
-                    local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart") or (obj:IsA("BasePart") and obj)
-                    if handle then
-                        if firetouchinterest then
-                            firetouchinterest(hrp, handle, 0)
-                            firetouchinterest(hrp, handle, 1)
-                        else
-                            handle.CFrame = hrp.CFrame
-                        end
-                    end
-                end
+            for _, item in ipairs(dropsFolder:GetChildren()) do
+                bringDropToPlayer(item)
             end
+        end)
+
+        -- 2. Instant ChildAdded Listener: The exact millisecond ANYTHING gets added to workspace.Drops, pull it!
+        childAddedConnection = dropsFolder.ChildAdded:Connect(function(item)
+            task.wait(0.05) -- brief delay to ensure physics parts instantiate
+            bringDropToPlayer(item)
         end)
     else
         if pickupLoop then pickupLoop:Disconnect() pickupLoop = nil end
+        if childAddedConnection then childAddedConnection:Disconnect() childAddedConnection = nil end
     end
 end)
 
@@ -610,56 +634,26 @@ DebugPickupBtn.MouseButton1Click:Connect(function()
         return
     end
 
-    local hrp = char.HumanoidRootPart
     local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace
-    local totalScanned = 0
-    local matchedCount = 0
+    local totalScanned = #dropsFolder:GetChildren()
     local pulledCount = 0
 
     print("--- [SHARK HUB] AUTO PICKUP DIAGNOSTICS ---")
-    print("Character Root Found:", hrp:GetFullName())
+    print("Character Root Found:", char.HumanoidRootPart:GetFullName())
     print("Executor supports firetouchinterest:", tostring(firetouchinterest ~= nil))
     print("Whitelist State:", tostring(USE_WHITELIST))
     print("Scanning Folder:", dropsFolder:GetFullName())
 
-    for _, obj in ipairs(dropsFolder:GetChildren()) do
-        totalScanned = totalScanned + 1
-        local itemName = obj.Name
-        local matched = false
-
-        if USE_WHITELIST then
-            for targetName, _ in pairs(TARGET_ITEMS_LOOKUP) do
-                if string.find(string.lower(itemName), string.lower(targetName)) then
-                    matched = true
-                    break
-                end
-            end
-        else
-            matched = true
-        end
-
-        if matched then
-            matchedCount = matchedCount + 1
-            local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart") or (obj:IsA("BasePart") and obj)
-            if handle then
-                pulledCount = pulledCount + 1
-                -- Force CFrame Teleport + Fire Touch Interest Test
-                handle.CFrame = hrp.CFrame
-                if firetouchinterest then
-                    firetouchinterest(hrp, handle, 0)
-                    firetouchinterest(hrp, handle, 1)
-                end
-            end
-        end
+    for _, item in ipairs(dropsFolder:GetChildren()) do
+        pulledCount = pulledCount + 1
+        bringDropToPlayer(item)
     end
 
-    print(string.format("DIAGNOSTIC COMPLETE: %d scanned | %d matched | %d physical parts pulled", totalScanned, matchedCount, pulledCount))
+    print(string.format("DIAGNOSTIC COMPLETE: %d items scanned and brought to player!", totalScanned))
     print("------------------------------------------")
 
     if totalScanned == 0 then
-        DebugPickupBtn.Text = "⚠️ 0 DROPS IN WORKSPACE"
-    elseif matchedCount == 0 then
-        DebugPickupBtn.Text = "⚠️ NO WHITELIST MATCHES"
+        DebugPickupBtn.Text = "⚠️ 0 DROPS IN WORKSPACE.DROPS"
     else
         DebugPickupBtn.Text = string.format("✅ PULLED %d DROPS!", pulledCount)
     end
