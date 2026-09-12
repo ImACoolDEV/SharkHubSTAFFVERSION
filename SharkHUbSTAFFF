@@ -1,4 +1,4 @@
--- Shark Hub V3.48 | Staff Edition (Draggable Green 'S' Toggle Icon & Fixed Icons)
+-- Shark Hub V3.49 | Staff Edition (Lighter Emerald Theme & Debug Auto Pickup)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -67,12 +67,12 @@ local pickupLoop, triggerBotConnection, escapeConnection, bringRakoofLoop, force
 local luck250Loop, luck500Loop, luck750Loop, luck1000Loop, dropRadarLoop
 
 --------------------------------------------------------------------------------
--- EMERALD GREEN THEME GRADIENTS
+-- LIGHTER EMERALD GREEN THEME GRADIENTS
 --------------------------------------------------------------------------------
 local GREEN_OFF_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 25, 12)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 45, 22)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 15, 8))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 62, 38)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(38, 98, 60)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 50, 30))
 })
 
 local GREEN_ON_GRADIENT = ColorSequence.new({
@@ -82,9 +82,9 @@ local GREEN_ON_GRADIENT = ColorSequence.new({
 })
 
 local GREEN_FRAME_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(4, 18, 9)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(10, 35, 18)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(3, 12, 6))
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 52, 32)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(32, 82, 50)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(14, 40, 24))
 })
 
 -- Remote Caching
@@ -155,15 +155,15 @@ ScreenGui.DisplayOrder = 100
 ScreenGui.Parent = PlayerGui
 
 --------------------------------------------------------------------------------
--- DRAGGABLE COOL GREEN 'S' TOGGLE ICON
+-- DRAGGABLE LIGHT EMERALD 'S' TOGGLE ICON
 --------------------------------------------------------------------------------
 local ToggleIcon = Instance.new("TextButton")
 ToggleIcon.Name = "SharkHubToggleIcon"
 ToggleIcon.Size = UDim2.new(0, 50, 0, 50)
 ToggleIcon.Position = UDim2.new(0, 20, 0.5, -25)
-ToggleIcon.BackgroundColor3 = Color3.fromRGB(6, 25, 12)
+ToggleIcon.BackgroundColor3 = Color3.fromRGB(22, 62, 38)
 ToggleIcon.Text = "S"
-ToggleIcon.TextColor3 = Color3.fromRGB(0, 255, 150)
+ToggleIcon.TextColor3 = Color3.fromRGB(0, 255, 170)
 ToggleIcon.Font = Enum.Font.FredokaOne
 ToggleIcon.TextSize = 32
 ToggleIcon.ZIndex = 200
@@ -172,7 +172,7 @@ Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(0, 14)
 
 local IconStroke = Instance.new("UIStroke", ToggleIcon)
 IconStroke.Thickness = 2.5
-IconStroke.Color = Color3.fromRGB(0, 255, 120)
+IconStroke.Color = Color3.fromRGB(0, 255, 150)
 
 local IconGrad = Instance.new("UIGradient")
 IconGrad.Color = GREEN_FRAME_GRADIENT
@@ -224,7 +224,7 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
 
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Thickness = 2
-MainStroke.Color = Color3.fromRGB(0, 255, 120)
+MainStroke.Color = Color3.fromRGB(0, 255, 150)
 
 local MainGrad = Instance.new("UIGradient")
 MainGrad.Color = GREEN_FRAME_GRADIENT
@@ -237,7 +237,7 @@ end)
 
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 52)
-TitleBar.BackgroundColor3 = Color3.fromRGB(6, 25, 12)
+TitleBar.BackgroundColor3 = Color3.fromRGB(22, 62, 38)
 TitleBar.ZIndex = 11
 TitleBar.Parent = MainFrame
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 16)
@@ -247,7 +247,7 @@ TitleText.Size = UDim2.new(0.6, 0, 1, 0)
 TitleText.Position = UDim2.new(0, 18, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "🦈 SHARK HUB — STAFF EDITION 🟢"
-TitleText.TextColor3 = Color3.fromRGB(0, 255, 150)
+TitleText.TextColor3 = Color3.fromRGB(0, 255, 170)
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Font = Enum.Font.GothamBold
 TitleText.TextSize = 16
@@ -284,7 +284,7 @@ ScrollingFrame.Position = UDim2.new(0, 12, 0, 58)
 ScrollingFrame.BackgroundTransparency = 1
 ScrollingFrame.BorderSizePixel = 0
 ScrollingFrame.ScrollBarThickness = 5
-ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 120)
+ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
 ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollingFrame.ZIndex = 11
 ScrollingFrame.Parent = MainFrame
@@ -352,7 +352,7 @@ local function CreateStaffButton(text, order, initialActive)
 
     local stroke = Instance.new("UIStroke", btn)
     stroke.Thickness = 1.5
-    stroke.Color = initialActive and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    stroke.Color = initialActive and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     return btn, stroke, grad
 end
@@ -364,7 +364,7 @@ local RadarFrame = Instance.new("Frame")
 RadarFrame.Name = "DropProbabilityRadar"
 RadarFrame.Size = UDim2.new(0, 280, 0, 110)
 RadarFrame.Position = UDim2.new(0.5, 380, 0.5, -55)
-RadarFrame.BackgroundColor3 = Color3.fromRGB(4, 18, 9)
+RadarFrame.BackgroundColor3 = Color3.fromRGB(18, 52, 32)
 RadarFrame.BorderSizePixel = 0
 RadarFrame.ZIndex = 50
 RadarFrame.Visible = true
@@ -373,7 +373,7 @@ Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0, 12)
 
 local RadarStroke = Instance.new("UIStroke", RadarFrame)
 RadarStroke.Thickness = 2
-RadarStroke.Color = Color3.fromRGB(0, 255, 120)
+RadarStroke.Color = Color3.fromRGB(0, 255, 150)
 
 local RadarGrad = Instance.new("UIGradient")
 RadarGrad.Color = GREEN_FRAME_GRADIENT
@@ -385,7 +385,7 @@ RadarTitle.Size = UDim2.new(1, -30, 0, 30)
 RadarTitle.Position = UDim2.new(0, 10, 0, 4)
 RadarTitle.BackgroundTransparency = 1
 RadarTitle.Text = "🔮 CLOSEST TARGET DROP"
-RadarTitle.TextColor3 = Color3.fromRGB(0, 255, 150)
+RadarTitle.TextColor3 = Color3.fromRGB(0, 255, 170)
 RadarTitle.Font = Enum.Font.GothamBold
 RadarTitle.TextSize = 12
 RadarTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -395,7 +395,7 @@ RadarTitle.Parent = RadarFrame
 local RadarClose = Instance.new("TextButton")
 RadarClose.Size = UDim2.new(0, 22, 0, 22)
 RadarClose.Position = UDim2.new(1, -26, 0, 6)
-RadarClose.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+RadarClose.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 RadarClose.Text = "X"
 RadarClose.TextColor3 = Color3.fromRGB(255, 255, 255)
 RadarClose.Font = Enum.Font.GothamBold
@@ -408,14 +408,14 @@ RadarClose.MouseButton1Click:Connect(function() RadarFrame.Visible = false end)
 local DisplayCard = Instance.new("Frame")
 DisplayCard.Size = UDim2.new(1, -16, 0, 60)
 DisplayCard.Position = UDim2.new(0, 8, 0, 38)
-DisplayCard.BackgroundColor3 = Color3.fromRGB(10, 35, 18)
+DisplayCard.BackgroundColor3 = Color3.fromRGB(30, 78, 48)
 DisplayCard.ZIndex = 51
 DisplayCard.Parent = RadarFrame
 Instance.new("UICorner", DisplayCard).CornerRadius = UDim.new(0, 8)
 
 local CardStroke = Instance.new("UIStroke", DisplayCard)
 CardStroke.Thickness = 1
-CardStroke.Color = Color3.fromRGB(0, 220, 110)
+CardStroke.Color = Color3.fromRGB(0, 240, 140)
 
 local RadarItemName = Instance.new("TextLabel")
 RadarItemName.Size = UDim2.new(1, -12, 0, 22)
@@ -434,7 +434,7 @@ RadarItemInfo.Size = UDim2.new(1, -12, 0, 20)
 RadarItemInfo.Position = UDim2.new(0, 8, 0, 30)
 RadarItemInfo.BackgroundTransparency = 1
 RadarItemInfo.Text = "Distance: -- | Chance: --"
-RadarItemInfo.TextColor3 = Color3.fromRGB(0, 255, 150)
+RadarItemInfo.TextColor3 = Color3.fromRGB(0, 255, 170)
 RadarItemInfo.Font = Enum.Font.Gotham
 RadarItemInfo.TextSize = 11
 RadarItemInfo.TextXAlignment = Enum.TextXAlignment.Left
@@ -536,6 +536,7 @@ local StaminaBtn, _, StaminaGrad = CreateStaffButton("⚡ MAX STAMINA (SET REMOT
 local PredictDropBtn, _, PredictDropGrad = CreateStaffButton("🔮 CHECK NEXT ITEM DROP", 18, false)
 local PickupFilterBtn, PickupFilterStroke, PickupFilterGrad = CreateStaffButton("🎯 PICKUP FILTER (WHITE/BLACK): ON", 19, true)
 local ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad = CreateStaffButton("🔮 TOGGLE DROP RADAR GUI: ON", 20, true)
+local DebugPickupBtn, DebugPickupStroke, DebugPickupGrad = CreateStaffButton("🐛 DEBUG AUTO PICKUP", 21, false)
 
 --------------------------------------------------------------------------------
 -- FEATURE EXECUTION LOGIC
@@ -551,14 +552,14 @@ ToggleRadarBtn.MouseButton1Click:Connect(function()
     RadarFrame.Visible = not RadarFrame.Visible
     ToggleRadarBtn.Text = RadarFrame.Visible and "🔮 TOGGLE DROP RADAR GUI: ON" or "🔮 TOGGLE DROP RADAR GUI: OFF"
     ToggleRadarGrad.Color = RadarFrame.Visible and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    ToggleRadarStroke.Color = RadarFrame.Visible and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    ToggleRadarStroke.Color = RadarFrame.Visible and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 end)
 
 AutoPickupBtn.MouseButton1Click:Connect(function()
     AUTO_PICKUP_ENABLED = not AUTO_PICKUP_ENABLED
     AutoPickupBtn.Text = AUTO_PICKUP_ENABLED and "🎁 Golden Staff Auto Pickup: ON" or "🎁 Golden Staff Auto Pickup: OFF"
     AutoPickupGrad.Color = AUTO_PICKUP_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    AutoPickupStroke.Color = AUTO_PICKUP_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    AutoPickupStroke.Color = AUTO_PICKUP_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     if AUTO_PICKUP_ENABLED then
         pickupLoop = RunService.Heartbeat:Connect(function()
@@ -600,11 +601,77 @@ AutoPickupBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Diagnostic Debug Button Handler
+DebugPickupBtn.MouseButton1Click:Connect(function()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        DebugPickupBtn.Text = "⚠️ ERROR: NO CHAR/HRP"
+        task.delay(2, function() DebugPickupBtn.Text = "🐛 DEBUG AUTO PICKUP" end)
+        return
+    end
+
+    local hrp = char.HumanoidRootPart
+    local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace
+    local totalScanned = 0
+    local matchedCount = 0
+    local pulledCount = 0
+
+    print("--- [SHARK HUB] AUTO PICKUP DIAGNOSTICS ---")
+    print("Character Root Found:", hrp:GetFullName())
+    print("Executor supports firetouchinterest:", tostring(firetouchinterest ~= nil))
+    print("Whitelist State:", tostring(USE_WHITELIST))
+    print("Scanning Folder:", dropsFolder:GetFullName())
+
+    for _, obj in ipairs(dropsFolder:GetChildren()) do
+        totalScanned = totalScanned + 1
+        local itemName = obj.Name
+        local matched = false
+
+        if USE_WHITELIST then
+            for targetName, _ in pairs(TARGET_ITEMS_LOOKUP) do
+                if string.find(string.lower(itemName), string.lower(targetName)) then
+                    matched = true
+                    break
+                end
+            end
+        else
+            matched = true
+        end
+
+        if matched then
+            matchedCount = matchedCount + 1
+            local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart") or (obj:IsA("BasePart") and obj)
+            if handle then
+                pulledCount = pulledCount + 1
+                -- Force CFrame Teleport + Fire Touch Interest Test
+                handle.CFrame = hrp.CFrame
+                if firetouchinterest then
+                    firetouchinterest(hrp, handle, 0)
+                    firetouchinterest(hrp, handle, 1)
+                end
+            end
+        end
+    end
+
+    print(string.format("DIAGNOSTIC COMPLETE: %d scanned | %d matched | %d physical parts pulled", totalScanned, matchedCount, pulledCount))
+    print("------------------------------------------")
+
+    if totalScanned == 0 then
+        DebugPickupBtn.Text = "⚠️ 0 DROPS IN WORKSPACE"
+    elseif matchedCount == 0 then
+        DebugPickupBtn.Text = "⚠️ NO WHITELIST MATCHES"
+    else
+        DebugPickupBtn.Text = string.format("✅ PULLED %d DROPS!", pulledCount)
+    end
+
+    task.delay(2.5, function() DebugPickupBtn.Text = "🐛 DEBUG AUTO PICKUP" end)
+end)
+
 AIBattleBtn.MouseButton1Click:Connect(function()
     AI_BATTLE_ENABLED = not AI_BATTLE_ENABLED
     AIBattleBtn.Text = AI_BATTLE_ENABLED and "🤖 AI BATTLE (The_Rake): ON" or "🤖 AI BATTLE (The_Rake): OFF"
     AIBattleGrad.Color = AI_BATTLE_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    AIBattleStroke.Color = AI_BATTLE_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    AIBattleStroke.Color = AI_BATTLE_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     if AI_BATTLE_ENABLED then
         noclipConnection = RunService.Stepped:Connect(function()
@@ -637,7 +704,7 @@ AutoAttackBtn.MouseButton1Click:Connect(function()
     AUTO_ATTACK_ENABLED = not AUTO_ATTACK_ENABLED
     AutoAttackBtn.Text = AUTO_ATTACK_ENABLED and "⚔️ Fast Spam Clicker: ON" or "⚔️ Fast Spam Clicker: OFF"
     AutoAttackGrad.Color = AUTO_ATTACK_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    AutoAttackStroke.Color = AUTO_ATTACK_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    AutoAttackStroke.Color = AUTO_ATTACK_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     if AUTO_ATTACK_ENABLED then
         attackLoop = RunService.RenderStepped:Connect(function() executeSpamClick() end)
@@ -650,7 +717,7 @@ BringBossBtn.MouseButton1Click:Connect(function()
     BRING_BOSS_ENABLED = not BRING_BOSS_ENABLED
     BringBossBtn.Text = BRING_BOSS_ENABLED and "🧲 Bring Boss: ON" or "🧲 Bring Boss To Player: OFF"
     BringBossGrad.Color = BRING_BOSS_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    BringBossStroke.Color = BRING_BOSS_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    BringBossStroke.Color = BRING_BOSS_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     if BRING_BOSS_ENABLED then
         bringLoop = RunService.Heartbeat:Connect(function()
@@ -669,7 +736,7 @@ HitboxBtn.MouseButton1Click:Connect(function()
     EXPAND_HITBOX_ENABLED = not EXPAND_HITBOX_ENABLED
     HitboxBtn.Text = EXPAND_HITBOX_ENABLED and "📦 Expand Hitbox: ON" or "📦 Expand Target Hitbox: OFF"
     HitboxGrad.Color = EXPAND_HITBOX_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    HitboxStroke.Color = EXPAND_HITBOX_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    HitboxStroke.Color = EXPAND_HITBOX_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     if EXPAND_HITBOX_ENABLED then
         hitboxLoop = RunService.Heartbeat:Connect(function()
@@ -687,7 +754,7 @@ SpeedBtn.MouseButton1Click:Connect(function()
     SPEED_BOOST_ENABLED = not SPEED_BOOST_ENABLED
     SpeedBtn.Text = SPEED_BOOST_ENABLED and "⚡ Speed Boost: ON" or "⚡ Speed Boost (50 WalkSpeed): OFF"
     SpeedGrad.Color = SPEED_BOOST_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    SpeedStroke.Color = SPEED_BOOST_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    SpeedStroke.Color = SPEED_BOOST_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     local char = LocalPlayer.Character
     if char and char:FindFirstChildOfClass("Humanoid") then
@@ -699,7 +766,7 @@ TriggerBotBtn.MouseButton1Click:Connect(function()
     TRIGGERBOT_ENABLED = not TRIGGERBOT_ENABLED
     TriggerBotBtn.Text = TRIGGERBOT_ENABLED and "🎯 Trigger Bot: ON" or "🎯 Trigger Bot: OFF"
     TriggerBotGrad.Color = TRIGGERBOT_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    TriggerBotStroke.Color = TRIGGERBOT_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    TriggerBotStroke.Color = TRIGGERBOT_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     if TRIGGERBOT_ENABLED then
         triggerBotConnection = RunService.Heartbeat:Connect(function()
@@ -720,7 +787,7 @@ ForceDropBtn.MouseButton1Click:Connect(function()
     FORCE_DROP_ENABLED = not FORCE_DROP_ENABLED
     ForceDropBtn.Text = FORCE_DROP_ENABLED and "💥 FORCE DROP 1000%: ON" or "💥 FORCE DROP 1000%: OFF"
     ForceDropGrad.Color = FORCE_DROP_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    ForceDropStroke.Color = FORCE_DROP_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    ForceDropStroke.Color = FORCE_DROP_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
     
     if FORCE_DROP_ENABLED then
         updateRemoteCache()
@@ -760,7 +827,7 @@ Luck250Btn.MouseButton1Click:Connect(function()
     LUCK_250_ENABLED = not LUCK_250_ENABLED
     Luck250Btn.Text = LUCK_250_ENABLED and "🍀 250% LUCK: ON" or "🍀 250% WORLD LUCK: OFF"
     Luck250Grad.Color = LUCK_250_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    Luck250Stroke.Color = LUCK_250_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    Luck250Stroke.Color = LUCK_250_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
     if LUCK_250_ENABLED then
         luck250Loop = task.spawn(function() while LUCK_250_ENABLED do triggerGiftRainAndLoot(2.5) task.wait(0.35) end end)
     elseif luck250Loop then
@@ -772,7 +839,7 @@ Luck500Btn.MouseButton1Click:Connect(function()
     LUCK_500_ENABLED = not LUCK_500_ENABLED
     Luck500Btn.Text = LUCK_500_ENABLED and "🔥 500% LUCK: ON" or "🔥 500% WORLD LUCK: OFF"
     Luck500Grad.Color = LUCK_500_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    Luck500Stroke.Color = LUCK_500_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    Luck500Stroke.Color = LUCK_500_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
     if LUCK_500_ENABLED then
         luck500Loop = task.spawn(function() while LUCK_500_ENABLED do triggerGiftRainAndLoot(5.0) task.wait(0.35) end end)
     elseif luck500Loop then
@@ -784,7 +851,7 @@ Luck750Btn.MouseButton1Click:Connect(function()
     LUCK_750_ENABLED = not LUCK_750_ENABLED
     Luck750Btn.Text = LUCK_750_ENABLED and "💎 750% LUCK: ON" or "💎 750% WORLD LUCK: OFF"
     Luck750Grad.Color = LUCK_750_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    Luck750Stroke.Color = LUCK_750_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    Luck750Stroke.Color = LUCK_750_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
     if LUCK_750_ENABLED then
         luck750Loop = task.spawn(function() while LUCK_750_ENABLED do triggerGiftRainAndLoot(7.5) task.wait(0.35) end end)
     elseif luck750Loop then
@@ -796,7 +863,7 @@ Luck1000Btn.MouseButton1Click:Connect(function()
     LUCK_1000_ENABLED = not LUCK_1000_ENABLED
     Luck1000Btn.Text = LUCK_1000_ENABLED and "⚡ 1000% LUCK: ON" or "⚡ 1000% WORLD LUCK: OFF"
     Luck1000Grad.Color = LUCK_1000_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    Luck1000Stroke.Color = LUCK_1000_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    Luck1000Stroke.Color = LUCK_1000_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
     if LUCK_1000_ENABLED then
         luck1000Loop = task.spawn(function() while LUCK_1000_ENABLED do triggerGiftRainAndLoot(10.0) task.wait(0.3) end end)
     elseif luck1000Loop then
@@ -808,7 +875,7 @@ AutoEscapeBtn.MouseButton1Click:Connect(function()
     AUTO_ESCAPE_ENABLED = not AUTO_ESCAPE_ENABLED
     AutoEscapeBtn.Text = AUTO_ESCAPE_ENABLED and "🚨 Auto Escape: ON" or "🚨 Auto Escape (20% HP): OFF"
     AutoEscapeGrad.Color = AUTO_ESCAPE_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    AutoEscapeStroke.Color = AUTO_ESCAPE_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    AutoEscapeStroke.Color = AUTO_ESCAPE_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     if AUTO_ESCAPE_ENABLED then
         escapeConnection = RunService.Heartbeat:Connect(function()
@@ -829,7 +896,7 @@ BringRakoofBtn.MouseButton1Click:Connect(function()
     BRING_RAKOOF_ENABLED = not BRING_RAKOOF_ENABLED
     BringRakoofBtn.Text = BRING_RAKOOF_ENABLED and "🧲 Bring Rakoof: ON" or "🧲 Bring Rakoof: OFF"
     BringRakoofGrad.Color = BRING_RAKOOF_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    BringRakoofStroke.Color = BRING_RAKOOF_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    BringRakoofStroke.Color = BRING_RAKOOF_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 
     if BRING_RAKOOF_ENABLED then
         bringRakoofLoop = RunService.Heartbeat:Connect(function()
@@ -874,7 +941,7 @@ PickupFilterBtn.MouseButton1Click:Connect(function()
     USE_WHITELIST = not USE_WHITELIST
     PickupFilterBtn.Text = USE_WHITELIST and "🎯 PICKUP FILTER (WHITE/BLACK): ON" or "🎯 PICKUP FILTER (WHITE/BLACK): OFF"
     PickupFilterGrad.Color = USE_WHITELIST and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    PickupFilterStroke.Color = USE_WHITELIST and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    PickupFilterStroke.Color = USE_WHITELIST and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 end)
 
 TriggerCalamityBtn.MouseButton1Click:Connect(function()
