@@ -1,0 +1,860 @@
+-- Shark Hub V3.46 | Staff Edition (Emerald Green Theme & Drop Radar)
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Target Items Matrix
+local TARGET_ITEMS_LIST = {
+    "GoldenApple", "LegendaryEnergy", "IgnitionFlame", 
+    "SnowFlakes", "CorruptedHalo", "StrangeBar", "BurnedBone",
+    "Penguin", "PenguinPart", "PenguinParts", "Mesh", "Meshes",
+    "CrucibleSword", "Imposta", "NullBlock", "TrainerCap"
+}
+
+local TARGET_ITEMS_LOOKUP = {}
+for _, item in ipairs(TARGET_ITEMS_LIST) do
+    TARGET_ITEMS_LOOKUP[item] = true
+end
+
+-- Estimated Rarity Weights for Probability Generator
+local ITEM_PROBABILITIES = {
+    ["CrucibleSword"] = "3%",
+    ["CorruptedHalo"] = "5%",
+    ["IgnitionFlame"] = "8%",
+    ["LegendaryEnergy"] = "10%",
+    ["GoldenApple"] = "15%",
+    ["StrangeBar"] = "20%",
+    ["BurnedBone"] = "25%",
+    ["NullBlock"] = "30%",
+    ["Default"] = "40%"
+}
+
+-- Target Entities
+local TARGET_NAME = "DOOFmmy"
+local RAKE_NAME = "The_Rake"
+
+-- Feature States
+local AI_BATTLE_ENABLED = false
+local AUTO_ATTACK_ENABLED = false
+local BRING_BOSS_ENABLED = false
+local EXPAND_HITBOX_ENABLED = false
+local SPEED_BOOST_ENABLED = false
+local AUTO_PICKUP_ENABLED = false
+local TRIGGERBOT_ENABLED = false
+local AUTO_ESCAPE_ENABLED = false
+local BRING_RAKOOF_ENABLED = false
+local FORCE_DROP_ENABLED = false
+local USE_WHITELIST = true
+local USE_BLACKLIST = true
+
+-- Luck Boost States
+local LUCK_250_ENABLED = false
+local LUCK_500_ENABLED = false
+local LUCK_750_ENABLED = false
+local LUCK_1000_ENABLED = false
+
+local TOGGLE_KEY = Enum.KeyCode.RightControl
+local QUICK_TOGGLE_KEY = Enum.KeyCode.X 
+
+-- Connections
+local aiBattleLoop, attackLoop, bringLoop, hitboxLoop, noclipConnection
+local pickupLoop, triggerBotConnection, escapeConnection, bringRakoofLoop, forceDropLoop
+local luck250Loop, luck500Loop, luck750Loop, luck1000Loop, dropRadarLoop
+
+--------------------------------------------------------------------------------
+-- EMERALD GREEN THEME GRADIENTS
+--------------------------------------------------------------------------------
+local GREEN_OFF_GRADIENT = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 25, 12)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 45, 22)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 15, 8))
+})
+
+local GREEN_ON_GRADIENT = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 235, 110)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 170)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 160, 80))
+})
+
+local GREEN_FRAME_GRADIENT = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(4, 18, 9)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(10, 35, 18)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(3, 12, 6))
+})
+
+-- Remote Caching
+local cachedRemotes = { GiftRain = {}, LootItem = {}, ItemDrop = {} }
+
+local function updateRemoteCache()
+    table.clear(cachedRemotes.GiftRain)
+    table.clear(cachedRemotes.LootItem)
+    table.clear(cachedRemotes.ItemDrop)
+
+    for _, obj in ipairs(game:GetDescendants()) do
+        if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") or obj:IsA("BindableEvent") then
+            local nameLower = string.lower(obj.Name)
+            if nameLower == "giftrain" or string.find(nameLower, "giftrain") then
+                table.insert(cachedRemotes.GiftRain, obj)
+            elseif (nameLower == "lootitem" or string.find(nameLower, "lootitem")) and not string.find(nameLower, "player") then
+                table.insert(cachedRemotes.LootItem, obj)
+            elseif string.find(nameLower, "itemdrop") or string.find(nameLower, "drop") then
+                table.insert(cachedRemotes.ItemDrop, obj)
+            end
+        end
+    end
+end
+updateRemoteCache()
+
+local function triggerGiftRainAndLoot(multiplier)
+    if #cachedRemotes.GiftRain == 0 and #cachedRemotes.LootItem == 0 then updateRemoteCache() end
+    for _, obj in ipairs(cachedRemotes.GiftRain) do
+        pcall(function() if obj:IsA("BindableEvent") then obj:Fire(multiplier) else obj:FireServer(multiplier) end end)
+    end
+    for _, obj in ipairs(cachedRemotes.LootItem) do
+        pcall(function() if obj:IsA("BindableEvent") then obj:Fire(multiplier) else obj:FireServer(multiplier) end end)
+    end
+end
+
+local function findTargetModel(query)
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and string.find(string.lower(obj.Name), string.lower(query)) then
+            local targetPart = obj:FindFirstChild("Torso")
+                or obj:FindFirstChild("HumanoidRootPart")
+                or obj:FindFirstChild("UpperTorso")
+                or obj:FindFirstChildWhichIsA("BasePart")
+            if targetPart then return obj, targetPart end
+        end
+    end
+    return nil, nil
+end
+
+local function executeSpamClick()
+    VirtualUser:Button1Down(Vector2.zero, Workspace.CurrentCamera.CFrame)
+    VirtualUser:Button1Up(Vector2.zero, Workspace.CurrentCamera.CFrame)
+    local character = LocalPlayer.Character
+    if character then
+        local tool = character:FindFirstChildOfClass("Tool")
+        if tool then tool:Activate() end
+    end
+end
+
+-- Clean previous instances
+if PlayerGui:FindFirstChild("SharkHubStaffGui") then
+    PlayerGui.SharkHubStaffGui:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SharkHubStaffGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 100
+ScreenGui.Parent = PlayerGui
+
+--------------------------------------------------------------------------------
+-- MAIN GUI WINDOW
+--------------------------------------------------------------------------------
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainStaffFrame"
+MainFrame.Size = UDim2.new(0, 740, 0, 460)
+MainFrame.Position = UDim2.new(0.5, -370, 0.5, -230)
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Thickness = 2
+MainStroke.Color = Color3.fromRGB(0, 255, 120)
+
+local MainGrad = Instance.new("UIGradient")
+MainGrad.Color = GREEN_FRAME_GRADIENT
+MainGrad.Rotation = 45
+MainGrad.Parent = MainFrame
+
+RunService.RenderStepped:Connect(function()
+    MainGrad.Rotation = (MainGrad.Rotation + 0.3) % 360
+end)
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 52)
+TitleBar.BackgroundColor3 = Color3.fromRGB(6, 25, 12)
+TitleBar.ZIndex = 11
+TitleBar.Parent = MainFrame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 16)
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(0.6, 0, 1, 0)
+TitleText.Position = UDim2.new(0, 18, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "🦈 SHARK HUB — STAFF EDITION 🟢"
+TitleText.TextColor3 = Color3.fromRGB(0, 255, 150)
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextSize = 16
+TitleText.ZIndex = 12
+TitleText.Parent = TitleBar
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 32, 0, 32)
+MinimizeBtn.Position = UDim2.new(1, -82, 0.5, -16)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(245, 150, 60)
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 18
+MinimizeBtn.ZIndex = 13
+MinimizeBtn.Parent = TitleBar
+Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 8)
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 32, 0, 32)
+CloseBtn.Position = UDim2.new(1, -44, 0.5, -16)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(235, 75, 80)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 14
+CloseBtn.ZIndex = 13
+CloseBtn.Parent = TitleBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
+
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, -24, 1, -68)
+ScrollingFrame.Position = UDim2.new(0, 12, 0, 58)
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.BorderSizePixel = 0
+ScrollingFrame.ScrollBarThickness = 5
+ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 120)
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.ZIndex = 11
+ScrollingFrame.Parent = MainFrame
+
+local isMinimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    ScrollingFrame.Visible = not isMinimized
+    MainFrame.Size = isMinimized and UDim2.new(0, 740, 0, 52) or UDim2.new(0, 740, 0, 460)
+    MinimizeBtn.Text = isMinimized and "+" or "-"
+end)
+
+CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
+
+local UIGridLayout = Instance.new("UIGridLayout")
+UIGridLayout.CellSize = UDim2.new(0.485, 0, 0, 44)
+UIGridLayout.CellPadding = UDim2.new(0.03, 0, 0, 10)
+UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIGridLayout.Parent = ScrollingFrame
+
+UIGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIGridLayout.AbsoluteContentSize.Y + 20)
+end)
+
+-- Dragging logic
+local dragging, dragInput, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+local function CreateStaffButton(text, order, initialActive)
+    local btn = Instance.new("TextButton")
+    btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.LayoutOrder = order
+    btn.ZIndex = 12
+    btn.Parent = ScrollingFrame
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
+    
+    local grad = Instance.new("UIGradient")
+    grad.Color = initialActive and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    grad.Rotation = 90
+    grad.Parent = btn
+
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Thickness = 1.5
+    stroke.Color = initialActive and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    return btn, stroke, grad
+end
+
+--------------------------------------------------------------------------------
+-- SECONDARY GUI: DROP PROBABILITY & RADAR WINDOW
+--------------------------------------------------------------------------------
+local RadarFrame = Instance.new("Frame")
+RadarFrame.Name = "DropProbabilityRadar"
+RadarFrame.Size = UDim2.new(0, 280, 0, 320)
+RadarFrame.Position = UDim2.new(0.5, 380, 0.5, -160)
+RadarFrame.BackgroundColor3 = Color3.fromRGB(4, 18, 9)
+RadarFrame.BorderSizePixel = 0
+RadarFrame.ZIndex = 50
+RadarFrame.Visible = true
+RadarFrame.Parent = ScreenGui
+Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0, 12)
+
+local RadarStroke = Instance.new("UIStroke", RadarFrame)
+RadarStroke.Thickness = 2
+RadarStroke.Color = Color3.fromRGB(0, 255, 120)
+
+local RadarGrad = Instance.new("UIGradient")
+RadarGrad.Color = GREEN_FRAME_GRADIENT
+RadarGrad.Rotation = 45
+RadarGrad.Parent = RadarFrame
+
+local RadarTitle = Instance.new("TextLabel")
+RadarTitle.Size = UDim2.new(1, -30, 0, 32)
+RadarTitle.Position = UDim2.new(0, 10, 0, 4)
+RadarTitle.BackgroundTransparency = 1
+RadarTitle.Text = "🔮 NEARBY DROP PROBABILITY"
+RadarTitle.TextColor3 = Color3.fromRGB(0, 255, 150)
+RadarTitle.Font = Enum.Font.GothamBold
+RadarTitle.TextSize = 12
+RadarTitle.TextXAlignment = Enum.TextXAlignment.Left
+RadarTitle.ZIndex = 51
+RadarTitle.Parent = RadarFrame
+
+local RadarClose = Instance.new("TextButton")
+RadarClose.Size = UDim2.new(0, 22, 0, 22)
+RadarClose.Position = UDim2.new(1, -26, 0, 6)
+RadarClose.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+RadarClose.Text = "✕"
+RadarClose.TextColor3 = Color3.fromRGB(255, 255, 255)
+RadarClose.Font = Enum.Font.GothamBold
+RadarClose.TextSize = 11
+RadarClose.ZIndex = 52
+RadarClose.Parent = RadarFrame
+Instance.new("UICorner", RadarClose).CornerRadius = UDim.new(0, 6)
+RadarClose.MouseButton1Click:Connect(function() RadarFrame.Visible = false end)
+
+local RadarScroll = Instance.new("ScrollingFrame")
+RadarScroll.Size = UDim2.new(1, -16, 1, -44)
+RadarScroll.Position = UDim2.new(0, 8, 0, 38)
+RadarScroll.BackgroundTransparency = 1
+RadarScroll.BorderSizePixel = 0
+RadarScroll.ScrollBarThickness = 4
+RadarScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 120)
+RadarScroll.ZIndex = 51
+RadarScroll.Parent = RadarFrame
+
+local RadarLayout = Instance.new("UIListLayout")
+RadarLayout.Padding = UDim.new(0, 6)
+RadarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+RadarLayout.Parent = RadarScroll
+
+RadarLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    RadarScroll.CanvasSize = UDim2.new(0, 0, 0, RadarLayout.AbsoluteContentSize.Y + 10)
+end)
+
+-- Dragging logic for Radar
+local rDragging, rDragInput, rDragStart, rStartPos
+RadarTitle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        rDragging = true
+        rDragStart = input.Position
+        rStartPos = RadarFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then rDragging = false end
+        end)
+    end
+end)
+RadarTitle.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        rDragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == rDragInput and rDragging then
+        local delta = input.Position - rDragStart
+        RadarFrame.Position = UDim2.new(rStartPos.X.Scale, rStartPos.X.Offset + delta.X, rStartPos.Y.Scale, rStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+local function updateDropProbabilityRadar()
+    for _, child in ipairs(RadarScroll:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace
+    local itemsFound = 0
+
+    for _, item in ipairs(dropsFolder:GetChildren()) do
+        local itemName = item.Name
+        local isTarget = false
+        
+        for tName, _ in pairs(TARGET_ITEMS_LOOKUP) do
+            if string.find(string.lower(itemName), string.lower(tName)) then
+                isTarget = true
+                itemName = tName
+                break
+            end
+        end
+
+        if isTarget then
+            local part = item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart") or (item:IsA("BasePart") and item)
+            if part then
+                local dist = math.floor((hrp.Position - part.Position).Magnitude)
+                if dist <= 150 then
+                    itemsFound = itemsFound + 1
+                    local chance = ITEM_PROBABILITIES[itemName] or ITEM_PROBABILITIES["Default"]
+
+                    local ItemCard = Instance.new("Frame")
+                    ItemCard.Size = UDim2.new(1, 0, 0, 36)
+                    ItemCard.BackgroundColor3 = Color3.fromRGB(10, 35, 18)
+                    ItemCard.ZIndex = 52
+                    ItemCard.Parent = RadarScroll
+                    Instance.new("UICorner", ItemCard).CornerRadius = UDim.new(0, 6)
+
+                    local CardStroke = Instance.new("UIStroke", ItemCard)
+                    CardStroke.Thickness = 1
+                    CardStroke.Color = Color3.fromRGB(0, 200, 100)
+
+                    local NameLbl = Instance.new("TextLabel")
+                    NameLbl.Size = UDim2.new(0.65, 0, 0, 18)
+                    NameLbl.Position = UDim2.new(0, 8, 0, 2)
+                    NameLbl.BackgroundTransparency = 1
+                    NameLbl.Text = "🎁 " .. itemName
+                    NameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    NameLbl.Font = Enum.Font.GothamBold
+                    NameLbl.TextSize = 11
+                    NameLbl.TextXAlignment = Enum.TextXAlignment.Left
+                    NameLbl.ZIndex = 53
+                    NameLbl.Parent = ItemCard
+
+                    local DistLbl = Instance.new("TextLabel")
+                    DistLbl.Size = UDim2.new(0.65, 0, 0, 14)
+                    DistLbl.Position = UDim2.new(0, 8, 0, 18)
+                    DistLbl.BackgroundTransparency = 1
+                    DistLbl.Text = "Dist: " .. tostring(dist) .. " studs"
+                    DistLbl.TextColor3 = Color3.fromRGB(150, 220, 170)
+                    DistLbl.Font = Enum.Font.Gotham
+                    DistLbl.TextSize = 9
+                    DistLbl.TextXAlignment = Enum.TextXAlignment.Left
+                    DistLbl.ZIndex = 53
+                    DistLbl.Parent = ItemCard
+
+                    local ChanceLbl = Instance.new("TextLabel")
+                    ChanceLbl.Size = UDim2.new(0.3, 0, 1, 0)
+                    ChanceLbl.Position = UDim2.new(0.68, 0, 0, 0)
+                    ChanceLbl.BackgroundTransparency = 1
+                    ChanceLbl.Text = chance .. " Chance"
+                    ChanceLbl.TextColor3 = Color3.fromRGB(0, 255, 120)
+                    ChanceLbl.Font = Enum.Font.GothamBold
+                    ChanceLbl.TextSize = 10
+                    ChanceLbl.ZIndex = 53
+                    ChanceLbl.Parent = ItemCard
+                end
+            end
+        end
+    end
+
+    if itemsFound == 0 then
+        local EmptyLbl = Instance.new("TextLabel")
+        EmptyLbl.Size = UDim2.new(1, 0, 0, 40)
+        EmptyLbl.BackgroundTransparency = 1
+        EmptyLbl.Text = "No Target Items Near Workspace.Drops"
+        EmptyLbl.TextColor3 = Color3.fromRGB(120, 160, 130)
+        EmptyLbl.Font = Enum.Font.Gotham
+        EmptyLbl.TextSize = 10
+        EmptyLbl.ZIndex = 52
+        EmptyLbl.Parent = RadarScroll
+    end
+end
+
+dropRadarLoop = RunService.Heartbeat:Connect(function()
+    if RadarFrame.Visible and tick() % 1 < 0.1 then
+        updateDropProbabilityRadar()
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- MAIN HUB BUTTON MATRIX (Excluding Spin 30x)
+--------------------------------------------------------------------------------
+local TriggerCalamityBtn, _, TriggerCalamityGrad = CreateStaffButton("⚡ TRIGGER CALAMITY MODE", 1, false)
+local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 2, false)
+local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 3, false)
+local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 4, false)
+local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 5, false)
+local SpeedBtn, SpeedStroke, SpeedGrad = CreateStaffButton("⚡ Speed Boost (50 WalkSpeed): OFF", 6, false)
+local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 7, false)
+local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 8, false)
+local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 1000%: OFF", 9, false)
+local ToolRenamerBtn, _, ToolRenamerGrad = CreateStaffButton("✏️ RENAME ALL TOOLS", 10, false)
+local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 11, false)
+local Luck500Btn, Luck500Stroke, Luck500Grad = CreateStaffButton("🔥 500% WORLD LUCK: OFF", 12, false)
+local Luck750Btn, Luck750Stroke, Luck750Grad = CreateStaffButton("💎 750% WORLD LUCK: OFF", 13, false)
+local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 14, false)
+local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 15, false)
+local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 16, false)
+local StaminaBtn, _, StaminaGrad = CreateStaffButton("⚡ MAX STAMINA (SET REMOTES)", 17, false)
+local PredictDropBtn, _, PredictDropGrad = CreateStaffButton("🔮 CHECK NEXT ITEM DROP", 18, false)
+local PickupFilterBtn, PickupFilterStroke, PickupFilterGrad = CreateStaffButton("🎯 PICKUP FILTER (WHITE/BLACK): ON", 19, true)
+local ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad = CreateStaffButton("🔮 TOGGLE DROP RADAR GUI: ON", 20, true)
+
+--------------------------------------------------------------------------------
+-- FEATURE EXECUTION LOGIC
+--------------------------------------------------------------------------------
+
+ToggleRadarBtn.MouseButton1Click:Connect(function()
+    RadarFrame.Visible = not RadarFrame.Visible
+    ToggleRadarBtn.Text = RadarFrame.Visible and "🔮 TOGGLE DROP RADAR GUI: ON" or "🔮 TOGGLE DROP RADAR GUI: OFF"
+    ToggleRadarGrad.Color = RadarFrame.Visible and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    ToggleRadarStroke.Color = RadarFrame.Visible and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+end)
+
+-- Universal/Golden Auto Pickup targeting Workspace.Drops
+AutoPickupBtn.MouseButton1Click:Connect(function()
+    AUTO_PICKUP_ENABLED = not AUTO_PICKUP_ENABLED
+    AutoPickupBtn.Text = AUTO_PICKUP_ENABLED and "🎁 Golden Staff Auto Pickup: ON" or "🎁 Golden Staff Auto Pickup: OFF"
+    AutoPickupGrad.Color = AUTO_PICKUP_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    AutoPickupStroke.Color = AUTO_PICKUP_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    if AUTO_PICKUP_ENABLED then
+        pickupLoop = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local hrp = char.HumanoidRootPart
+
+            local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace
+            for _, obj in ipairs(dropsFolder:GetChildren()) do
+                local itemName = obj.Name
+                local matched = false
+
+                if USE_WHITELIST then
+                    for targetName, _ in pairs(TARGET_ITEMS_LOOKUP) do
+                        if string.find(string.lower(itemName), string.lower(targetName)) then
+                            matched = true
+                            break
+                        end
+                    end
+                else
+                    matched = true
+                end
+
+                if matched then
+                    local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart") or (obj:IsA("BasePart") and obj)
+                    if handle then
+                        if firetouchinterest then
+                            firetouchinterest(hrp, handle, 0)
+                            firetouchinterest(hrp, handle, 1)
+                        else
+                            handle.CFrame = hrp.CFrame
+                        end
+                    end
+                end
+            end
+        end)
+    else
+        if pickupLoop then pickupLoop:Disconnect() pickupLoop = nil end
+    end
+end)
+
+AIBattleBtn.MouseButton1Click:Connect(function()
+    AI_BATTLE_ENABLED = not AI_BATTLE_ENABLED
+    AIBattleBtn.Text = AI_BATTLE_ENABLED and "🤖 AI BATTLE (The_Rake): ON" or "🤖 AI BATTLE (The_Rake): OFF"
+    AIBattleGrad.Color = AI_BATTLE_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    AIBattleStroke.Color = AI_BATTLE_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    if AI_BATTLE_ENABLED then
+        noclipConnection = RunService.Stepped:Connect(function()
+            if LocalPlayer.Character then
+                for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+
+        aiBattleLoop = RunService.RenderStepped:Connect(function()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local _, rakePart = findTargetModel(RAKE_NAME)
+
+            if rakePart then
+                local angle = tick() * 12
+                local offset = Vector3.new(math.cos(angle) * 8, 2, math.sin(angle) * 8)
+                char.HumanoidRootPart.CFrame = CFrame.new(rakePart.Position + offset, rakePart.Position)
+                executeSpamClick()
+            end
+        end)
+    else
+        if aiBattleLoop then aiBattleLoop:Disconnect() aiBattleLoop = nil end
+        if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
+    end
+end)
+
+AutoAttackBtn.MouseButton1Click:Connect(function()
+    AUTO_ATTACK_ENABLED = not AUTO_ATTACK_ENABLED
+    AutoAttackBtn.Text = AUTO_ATTACK_ENABLED and "⚔️ Fast Spam Clicker: ON" or "⚔️ Fast Spam Clicker: OFF"
+    AutoAttackGrad.Color = AUTO_ATTACK_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    AutoAttackStroke.Color = AUTO_ATTACK_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    if AUTO_ATTACK_ENABLED then
+        attackLoop = RunService.RenderStepped:Connect(function() executeSpamClick() end)
+    else
+        if attackLoop then attackLoop:Disconnect() attackLoop = nil end
+    end
+end)
+
+BringBossBtn.MouseButton1Click:Connect(function()
+    BRING_BOSS_ENABLED = not BRING_BOSS_ENABLED
+    BringBossBtn.Text = BRING_BOSS_ENABLED and "🧲 Bring Boss: ON" or "🧲 Bring Boss To Player: OFF"
+    BringBossGrad.Color = BRING_BOSS_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    BringBossStroke.Color = BRING_BOSS_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    if BRING_BOSS_ENABLED then
+        bringLoop = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local _, targetPart = findTargetModel(RAKE_NAME)
+                if targetPart then targetPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3) end
+            end
+        end)
+    else
+        if bringLoop then bringLoop:Disconnect() bringLoop = nil end
+    end
+end)
+
+HitboxBtn.MouseButton1Click:Connect(function()
+    EXPAND_HITBOX_ENABLED = not EXPAND_HITBOX_ENABLED
+    HitboxBtn.Text = EXPAND_HITBOX_ENABLED and "📦 Expand Hitbox: ON" or "📦 Expand Target Hitbox: OFF"
+    HitboxGrad.Color = EXPAND_HITBOX_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    HitboxStroke.Color = EXPAND_HITBOX_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    if EXPAND_HITBOX_ENABLED then
+        hitboxLoop = RunService.Heartbeat:Connect(function()
+            local _, rakePart = findTargetModel(RAKE_NAME)
+            local _, doofPart = findTargetModel(TARGET_NAME)
+            if rakePart then rakePart.Size = Vector3.new(20, 20, 20) rakePart.Transparency = 0.7 end
+            if doofPart then doofPart.Size = Vector3.new(20, 20, 20) doofPart.Transparency = 0.7 end
+        end)
+    else
+        if hitboxLoop then hitboxLoop:Disconnect() hitboxLoop = nil end
+    end
+end)
+
+SpeedBtn.MouseButton1Click:Connect(function()
+    SPEED_BOOST_ENABLED = not SPEED_BOOST_ENABLED
+    SpeedBtn.Text = SPEED_BOOST_ENABLED and "⚡ Speed Boost: ON" or "⚡ Speed Boost (50 WalkSpeed): OFF"
+    SpeedGrad.Color = SPEED_BOOST_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    SpeedStroke.Color = SPEED_BOOST_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChildOfClass("Humanoid") then
+        char:FindFirstChildOfClass("Humanoid").WalkSpeed = SPEED_BOOST_ENABLED and 50 or 16
+    end
+end)
+
+TriggerBotBtn.MouseButton1Click:Connect(function()
+    TRIGGERBOT_ENABLED = not TRIGGERBOT_ENABLED
+    TriggerBotBtn.Text = TRIGGERBOT_ENABLED and "🎯 Trigger Bot: ON" or "🎯 Trigger Bot: OFF"
+    TriggerBotGrad.Color = TRIGGERBOT_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    TriggerBotStroke.Color = TRIGGERBOT_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    if TRIGGERBOT_ENABLED then
+        triggerBotConnection = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local _, bossRoot = findTargetModel(RAKE_NAME)
+            if not bossRoot then _, bossRoot = findTargetModel(TARGET_NAME) end
+            if bossRoot and (char.HumanoidRootPart.Position - bossRoot.Position).Magnitude <= 25 then
+                executeSpamClick()
+            end
+        end)
+    else
+        if triggerBotConnection then triggerBotConnection:Disconnect() triggerBotConnection = nil end
+    end
+end)
+
+ForceDropBtn.MouseButton1Click:Connect(function()
+    FORCE_DROP_ENABLED = not FORCE_DROP_ENABLED
+    ForceDropBtn.Text = FORCE_DROP_ENABLED and "💥 FORCE DROP 1000%: ON" or "💥 FORCE DROP 1000%: OFF"
+    ForceDropGrad.Color = FORCE_DROP_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    ForceDropStroke.Color = FORCE_DROP_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    
+    if FORCE_DROP_ENABLED then
+        updateRemoteCache()
+        forceDropLoop = task.spawn(function()
+            while FORCE_DROP_ENABLED do
+                for _, remote in ipairs(cachedRemotes.GiftRain) do
+                    pcall(function() remote:FireServer(1000) end)
+                end
+                for _, remote in ipairs(cachedRemotes.LootItem) do
+                    pcall(function()
+                        for _, itemName in ipairs(TARGET_ITEMS_LIST) do remote:FireServer(itemName, 1000) end
+                    end)
+                end
+                task.wait(0.35)
+            end
+        end)
+    else
+        if forceDropLoop then task.cancel(forceDropLoop) forceDropLoop = nil end
+    end
+end)
+
+ToolRenamerBtn.MouseButton1Click:Connect(function()
+    local char = LocalPlayer.Character
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    local function renameItems(container)
+        if not container then return end
+        for _, item in ipairs(container:GetChildren()) do
+            if item:IsA("Tool") then item.Name = "🦈 Staff Calamity Blade" end
+        end
+    end
+    renameItems(char) renameItems(backpack)
+    ToolRenamerBtn.Text = "✅ ALL TOOLS RENAMED!"
+    task.delay(1.5, function() ToolRenamerBtn.Text = "✏️ RENAME ALL TOOLS" end)
+end)
+
+Luck250Btn.MouseButton1Click:Connect(function()
+    LUCK_250_ENABLED = not LUCK_250_ENABLED
+    Luck250Btn.Text = LUCK_250_ENABLED and "🍀 250% LUCK: ON" or "🍀 250% WORLD LUCK: OFF"
+    Luck250Grad.Color = LUCK_250_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    Luck250Stroke.Color = LUCK_250_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    if LUCK_250_ENABLED then
+        luck250Loop = task.spawn(function() while LUCK_250_ENABLED do triggerGiftRainAndLoot(2.5) task.wait(0.35) end end)
+    else if luck250Loop then task.cancel(luck250Loop) luck250Loop = nil end end
+end)
+
+Luck500Btn.MouseButton1Click:Connect(function()
+    LUCK_500_ENABLED = not LUCK_500_ENABLED
+    Luck500Btn.Text = LUCK_500_ENABLED and "🔥 500% LUCK: ON" or "🔥 500% WORLD LUCK: OFF"
+    Luck500Grad.Color = LUCK_500_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    Luck500Stroke.Color = LUCK_500_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    if LUCK_500_ENABLED then
+        luck500Loop = task.spawn(function() while LUCK_500_ENABLED do triggerGiftRainAndLoot(5.0) task.wait(0.35) end end)
+    else if luck500Loop then task.cancel(luck500Loop) luck500Loop = nil end end
+end)
+
+Luck750Btn.MouseButton1Click:Connect(function()
+    LUCK_750_ENABLED = not LUCK_750_ENABLED
+    Luck750Btn.Text = LUCK_750_ENABLED and "💎 750% LUCK: ON" or "💎 750% WORLD LUCK: OFF"
+    Luck750Grad.Color = LUCK_750_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    Luck750Stroke.Color = LUCK_750_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    if LUCK_750_ENABLED then
+        luck750Loop = task.spawn(function() while LUCK_750_ENABLED do triggerGiftRainAndLoot(7.5) task.wait(0.35) end end)
+    else if luck750Loop then task.cancel(luck750Loop) luck750Loop = nil end end
+end)
+
+Luck1000Btn.MouseButton1Click:Connect(function()
+    LUCK_1000_ENABLED = not LUCK_1000_ENABLED
+    Luck1000Btn.Text = LUCK_1000_ENABLED and "⚡ 1000% LUCK: ON" or "⚡ 1000% WORLD LUCK: OFF"
+    Luck1000Grad.Color = LUCK_1000_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    Luck1000Stroke.Color = LUCK_1000_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+    if LUCK_1000_ENABLED then
+        luck1000Loop = task.spawn(function() while LUCK_1000_ENABLED do triggerGiftRainAndLoot(10.0) task.wait(0.3) end end)
+    else if luck1000Loop then task.cancel(luck1000Loop) luck1000Loop = nil end end
+end)
+
+AutoEscapeBtn.MouseButton1Click:Connect(function()
+    AUTO_ESCAPE_ENABLED = not AUTO_ESCAPE_ENABLED
+    AutoEscapeBtn.Text = AUTO_ESCAPE_ENABLED and "🚨 Auto Escape: ON" or "🚨 Auto Escape (20% HP): OFF"
+    AutoEscapeGrad.Color = AUTO_ESCAPE_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    AutoEscapeStroke.Color = AUTO_ESCAPE_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    if AUTO_ESCAPE_ENABLED then
+        escapeConnection = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if (hum.Health / hum.MaxHealth) <= 0.2 then
+                    char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, 150, 0)
+                end
+            end
+        end)
+    else
+        if escapeConnection then escapeConnection:Disconnect() escapeConnection = nil end
+    end
+end)
+
+BringRakoofBtn.MouseButton1Click:Connect(function()
+    BRING_RAKOOF_ENABLED = not BRING_RAKOOF_ENABLED
+    BringRakoofBtn.Text = BRING_RAKOOF_ENABLED and "🧲 Bring Rakoof: ON" or "🧲 Bring Rakoof: OFF"
+    BringRakoofGrad.Color = BRING_RAKOOF_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    BringRakoofStroke.Color = BRING_RAKOOF_ENABLED and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+
+    if BRING_RAKOOF_ENABLED then
+        bringRakoofLoop = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local _, targetPart = findTargetModel(TARGET_NAME)
+                if targetPart then targetPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3) end
+            end
+        end)
+    else
+        if bringRakoofLoop then bringRakoofLoop:Disconnect() bringRakoofLoop = nil end
+    end
+end)
+
+StaminaBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        local remotesFolder = ReplicatedStorage:FindFirstChild("PlayerRemotes")
+        if remotesFolder and remotesFolder:FindFirstChild("SetStaminaValues") then
+            if firesignal then
+                firesignal(remotesFolder.SetStaminaValues.OnClientEvent, 100, 15, 42, 999999)
+                StaminaBtn.Text = "✅ STAMINA BOOSTED!"
+            else StaminaBtn.Text = "⚠️ MISSING FIRESIGNAL" end
+        else StaminaBtn.Text = "⚠️ REMOTE NOT FOUND" end
+    end)
+    task.delay(2, function() StaminaBtn.Text = "⚡ MAX STAMINA (SET REMOTES)" end)
+end)
+
+PredictDropBtn.MouseButton1Click:Connect(function()
+    local predictedItem = "Unknown / Random"
+    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("StringValue") or obj:IsA("ObjectValue") then
+            if string.find(string.lower(obj.Name), "nextdrop") or string.find(string.lower(obj.Name), "queuedrop") then
+                predictedItem = tostring(obj.Value) break
+            end
+        end
+    end
+    PredictDropBtn.Text = "🔮 NEXT DROP: " .. string.upper(predictedItem)
+    task.delay(3, function() PredictDropBtn.Text = "🔮 CHECK NEXT ITEM DROP" end)
+end)
+
+PickupFilterBtn.MouseButton1Click:Connect(function()
+    USE_WHITELIST = not USE_WHITELIST
+    PickupFilterBtn.Text = USE_WHITELIST and "🎯 PICKUP FILTER (WHITE/BLACK): ON" or "🎯 PICKUP FILTER (WHITE/BLACK): OFF"
+    PickupFilterGrad.Color = USE_WHITELIST and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    PickupFilterStroke.Color = USE_WHITELIST and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(15, 80, 40)
+end)
+
+TriggerCalamityBtn.MouseButton1Click:Connect(function()
+    TriggerCalamityBtn.Text = "⚡ TRIGGERING CALAMITY..."
+    task.delay(1.5, function() TriggerCalamityBtn.Text = "⚡ TRIGGER CALAMITY MODE" end)
+end)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == TOGGLE_KEY and MainFrame then
+        MainFrame.Visible = not MainFrame.Visible
+        RadarFrame.Visible = MainFrame.Visible
+    end
+end)
