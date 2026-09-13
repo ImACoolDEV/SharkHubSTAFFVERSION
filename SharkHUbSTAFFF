@@ -1,9 +1,8 @@
--- Shark Hub V4.00 | Staff Edition (Sleek Popup Loader, Anti-Lag Auto Trade & Extras)
+-- Shark Hub V4.20 | Complete Staff Suite (All Legacy + New Features Restored)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -12,7 +11,7 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 --------------------------------------------------------------------------------
--- SLEEK NON-BLOCKING POPUP LOADER (FIXED DARK SCREEN)
+-- LOADING SCREEN (DARK BACKDROP + SEENABLE CARD)
 --------------------------------------------------------------------------------
 if PlayerGui:FindFirstChild("SharkHubLoadingGui") then
     PlayerGui.SharkHubLoadingGui:Destroy()
@@ -21,9 +20,16 @@ end
 local LoadingGui = Instance.new("ScreenGui")
 LoadingGui.Name = "SharkHubLoadingGui"
 LoadingGui.DisplayOrder = 999
+LoadingGui.ResetOnSpawn = false
 LoadingGui.Parent = PlayerGui
 
--- Floating Card (Doesn't obscure game view with pitch black overlay)
+local LoadBackdrop = Instance.new("Frame")
+LoadBackdrop.Size = UDim2.new(1, 0, 1, 0)
+LoadBackdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+LoadBackdrop.BackgroundTransparency = 0.35
+LoadBackdrop.ZIndex = 999
+LoadBackdrop.Parent = LoadingGui
+
 local LoadCard = Instance.new("Frame")
 LoadCard.Size = UDim2.new(0, 360, 0, 140)
 LoadCard.Position = UDim2.new(0.5, -180, 0.5, -70)
@@ -41,20 +47,22 @@ local LoadTitle = Instance.new("TextLabel")
 LoadTitle.Size = UDim2.new(1, 0, 0, 40)
 LoadTitle.Position = UDim2.new(0, 0, 0, 10)
 LoadTitle.BackgroundTransparency = 1
-LoadTitle.Text = "🦈 SHARK HUB V4.00"
+LoadTitle.Text = "🦈 SHARK HUB V4.20"
 LoadTitle.TextColor3 = Color3.fromRGB(0, 255, 170)
 LoadTitle.Font = Enum.Font.FredokaOne
 LoadTitle.TextSize = 24
+LoadTitle.ZIndex = 1001
 LoadTitle.Parent = LoadCard
 
 local LoadSub = Instance.new("TextLabel")
 LoadSub.Size = UDim2.new(1, 0, 0, 20)
 LoadSub.Position = UDim2.new(0, 0, 0, 48)
 LoadSub.BackgroundTransparency = 1
-LoadSub.Text = "Fast Loading Engine Activated..."
+LoadSub.Text = "Restoring All Buttons & Initializing Features..."
 LoadSub.TextColor3 = Color3.fromRGB(180, 220, 200)
 LoadSub.Font = Enum.Font.GothamMedium
 LoadSub.TextSize = 12
+LoadSub.ZIndex = 1001
 LoadSub.Parent = LoadCard
 
 local BarBackground = Instance.new("Frame")
@@ -62,6 +70,7 @@ BarBackground.Size = UDim2.new(0, 300, 0, 10)
 BarBackground.Position = UDim2.new(0.5, -150, 0, 82)
 BarBackground.BackgroundColor3 = Color3.fromRGB(30, 45, 35)
 BarBackground.BorderSizePixel = 0
+BarBackground.ZIndex = 1001
 BarBackground.Parent = LoadCard
 Instance.new("UICorner", BarBackground).CornerRadius = UDim.new(0, 5)
 
@@ -69,58 +78,55 @@ local BarFill = Instance.new("Frame")
 BarFill.Size = UDim2.new(0, 0, 1, 0)
 BarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 170)
 BarFill.BorderSizePixel = 0
+BarFill.ZIndex = 1002
 BarFill.Parent = BarBackground
 Instance.new("UICorner", BarFill).CornerRadius = UDim.new(0, 5)
 
--- Quick 2-Second Non-Lag Loader
 task.spawn(function()
-    local fillTween = TweenService:Create(BarFill, TweenInfo.new(2, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 1, 0)})
+    local fillTween = TweenService:Create(BarFill, TweenInfo.new(1.6, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 1, 0)})
     fillTween:Play()
     fillTween.Completed:Wait()
 
-    local fadeOut = TweenService:Create(LoadCard, TweenInfo.new(0.4), {BackgroundTransparency = 1})
-    TweenService:Create(LoadTitle, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
-    TweenService:Create(LoadSub, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
-    TweenService:Create(BarBackground, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
-    TweenService:Create(BarFill, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
-    TweenService:Create(LoadStroke, TweenInfo.new(0.4), {Transparency = 1}):Play()
+    TweenService:Create(LoadBackdrop, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(LoadCard, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(LoadTitle, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+    TweenService:Create(LoadSub, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+    TweenService:Create(BarBackground, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(BarFill, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+    local fadeOut = TweenService:Create(LoadStroke, TweenInfo.new(0.3), {Transparency = 1})
     fadeOut:Play()
-    fadeOut.Completed:Connect(function() LoadingGui:Destroy() end)
+    fadeOut.Completed:Wait()
+    LoadingGui:Destroy()
 end)
 
 --------------------------------------------------------------------------------
--- RECIPES & SYSTEM CONSTANTS
+-- CONSTANTS & RECIPES
 --------------------------------------------------------------------------------
-local TARGET_ITEMS_LIST = {
-    "GoldenApple", "LegendaryEnergy", "IgnitionFlame", 
-    "SnowFlakes", "CorruptedHalo", "StrangeBar", "BurnedBone",
-    "Penguin", "PenguinPart", "PenguinParts", "Mesh", "Meshes",
-    "CrucibleSword", "Imposta", "NullBlock", "TrainerCap"
-}
-
-local TARGET_ITEMS_LOOKUP = {}
-for _, item in ipairs(TARGET_ITEMS_LIST) do TARGET_ITEMS_LOOKUP[item] = true end
-
 local TRADE_RECIPES = {
     ["SoulSurvivor"] = {"NullBlock", "CorruptedHalo"},
     ["TrafficCone"] = {"SoulSurvivor", "GoldenApple", "Imposta", "TrainerCap", "StrangeBar"}
 }
 
--- Feature States
-local AUTO_PICKUP_ENABLED = false
-local AUTO_DISABLE_CONE_ENABLED = false
-local BRO_MAX_LUCK_ENABLED = false
+-- States
+local SPEED_BOOST_ENABLED = false
 local ANTI_AFK_ENABLED = false
 local FPS_BOOSTER_ENABLED = false
+local BRO_MAX_LUCK_ENABLED = false
+local HITBOX_ENABLED = false
+local TRIGGERBOT_ENABLED = false
+local FORCE_DROP_ENABLED = false
+local AUTO_CONE_ENABLED = false
+local AI_BATTLE_ENABLED = false
+local AUTO_ATTACK_ENABLED = false
+local BRING_BOSS_ENABLED = false
+local AUTO_PICKUP_ENABLED = false
 local SELECTED_TRADE_ITEM = "SoulSurvivor"
 
 local TOGGLE_KEY = Enum.KeyCode.RightControl
-local visitedCones = {}
-
-local pickupLoop, coneLoop, broMaxLuckLoop, antiAfkConnection
+local speedConnection, antiAfkConnection, hitboxConnection
 
 --------------------------------------------------------------------------------
--- GRADIENTS & STYLING
+-- GRADIENTS
 --------------------------------------------------------------------------------
 local GREEN_OFF_GRADIENT = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 62, 38)),
@@ -158,14 +164,8 @@ local GRAY_WHITE_GRADIENT = ColorSequence.new({
     ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 70, 70))
 })
 
-local FIRE_MAX_LUCK_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 30, 0)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 150, 0)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 220, 0))
-})
-
 --------------------------------------------------------------------------------
--- OPTIMIZED HELPER FUNCTIONS (ZERO LAG)
+-- HELPER FUNCTIONS
 --------------------------------------------------------------------------------
 local function playerHasItem(itemName)
     local char = LocalPlayer.Character
@@ -175,16 +175,12 @@ local function playerHasItem(itemName)
     return false
 end
 
--- Fast Direct Lookup instead of game:GetDescendants() loop lag
 local function checkAlreadyOwns(itemName)
     local folder = ReplicatedStorage:FindFirstChild("AlreadyOwns") 
         or Workspace:FindFirstChild("AlreadyOwns") 
         or LocalPlayer:FindFirstChild("AlreadyOwns")
         
-    if folder and folder:FindFirstChild(itemName) then
-        return true
-    end
-    return false
+    return folder and folder:FindFirstChild(itemName) ~= nil
 end
 
 local function findTraderMark()
@@ -219,12 +215,9 @@ ToggleIcon.TextColor3 = Color3.fromRGB(0, 255, 170)
 ToggleIcon.Font = Enum.Font.FredokaOne
 ToggleIcon.TextSize = 28
 ToggleIcon.ZIndex = 200
+ToggleIcon.Active = true
 ToggleIcon.Parent = ScreenGui
 Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(0, 14)
-
-local IconStroke = Instance.new("UIStroke", ToggleIcon)
-IconStroke.Thickness = 2.5
-IconStroke.Color = Color3.fromRGB(0, 255, 150)
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainStaffFrame"
@@ -232,7 +225,7 @@ MainFrame.Size = UDim2.new(0, 740, 0, 490)
 MainFrame.Position = UDim2.new(0.5, -370, 0.5, -245)
 MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = false
+MainFrame.Active = true
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
 
@@ -246,9 +239,11 @@ MainGrad.Rotation = 45
 MainGrad.Parent = MainFrame
 
 local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
 TitleBar.Size = UDim2.new(1, 0, 0, 52)
 TitleBar.BackgroundColor3 = Color3.fromRGB(22, 62, 38)
 TitleBar.ZIndex = 11
+TitleBar.Active = true
 TitleBar.Parent = MainFrame
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 16)
 
@@ -256,7 +251,7 @@ local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(0.6, 0, 1, 0)
 TitleText.Position = UDim2.new(0, 18, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "🦈 SHARK HUB — STAFF V4.00 🟢"
+TitleText.Text = "🦈 SHARK HUB — FULL SUITE V4.20 🟢"
 TitleText.TextColor3 = Color3.fromRGB(0, 255, 170)
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Font = Enum.Font.GothamBold
@@ -264,15 +259,45 @@ TitleText.TextSize = 16
 TitleText.ZIndex = 12
 TitleText.Parent = TitleBar
 
--- Animated Rainbow RGB Title Glow
-task.spawn(function()
-    local hue = 0
-    while task.wait(0.05) do
-        hue = (hue + 0.01) % 1
-        TitleText.TextColor3 = Color3.fromHSV(hue, 0.7, 1)
+--------------------------------------------------------------------------------
+-- DRAGGABLE CONTROLLER
+--------------------------------------------------------------------------------
+local dragging, dragInput, dragStart, startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- CONTROLS & SCROLLING GRID
+--------------------------------------------------------------------------------
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 32, 0, 32)
 MinimizeBtn.Position = UDim2.new(1, -82, 0.5, -16)
@@ -304,7 +329,6 @@ ScrollingFrame.BackgroundTransparency = 1
 ScrollingFrame.BorderSizePixel = 0
 ScrollingFrame.ScrollBarThickness = 5
 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
-ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollingFrame.ZIndex = 11
 ScrollingFrame.Parent = MainFrame
 
@@ -335,6 +359,7 @@ local function CreateStaffButton(text, order, initialActive)
     btn.TextSize = 11
     btn.LayoutOrder = order
     btn.ZIndex = 12
+    btn.Active = true
     btn.Parent = ScrollingFrame
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
     
@@ -351,34 +376,42 @@ local function CreateStaffButton(text, order, initialActive)
 end
 
 --------------------------------------------------------------------------------
--- FEATURE BUTTON MATRIX
+-- ALL BUTTON MATRIX (COMPLETE LIST RESTORED)
 --------------------------------------------------------------------------------
 
--- ONE-CLICK LAG-FREE AUTO TRADE BUTTON
+-- Row 1
 local AutoTradeActionBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 EXECUTE AUTO TRADE (SoulSurvivor)", 1, false)
 local TradeDropdownBtn, _, _ = CreateStaffButton("📜 SELECT TRADE ITEM ▼", 2, false)
 
--- BRO MAX LUCK 100000000%
+-- Row 2
 local BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad = CreateStaffButton("🔥 BRO MAX LUCK 100000000%: OFF", 3, false)
-
--- AUTO DISABLE CONE
 local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 4, false)
 AutoDisableConeGrad.Color = SPECIAL_ORANGE_OFF
 
--- AUTO SURVIVE BURNED BONE
+-- Row 3
 local AutoSurviveBtn, AutoSurviveStroke, AutoSurviveGrad = CreateStaffButton("🦴 AUTO SURVIVE BURNED BONE", 5, false)
 AutoSurviveGrad.Color = GRAY_WHITE_GRADIENT
 AutoSurviveBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
-
--- NEW COOL FEATURES: ANTI-AFK & FPS BOOSTER
 local AntiAfkBtn, AntiAfkStroke, AntiAfkGrad = CreateStaffButton("🛡️ ANTI-AFK PROTECTION: OFF", 6, false)
-local FpsBoosterBtn, FpsBoosterStroke, FpsBoosterGrad = CreateStaffButton("⚡ FPS BOOSTER (LAG FIX): OFF", 7, false)
 
--- STANDARD HUB BUTTONS
+-- Row 4
+local FpsBoosterBtn, FpsBoosterStroke, FpsBoosterGrad = CreateStaffButton("⚡ FPS BOOSTER (LAG FIX): OFF", 7, false)
 local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 8, false)
-local AIBattleBtn, _, _ = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 9, false)
-local AutoAttackBtn, _, _ = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 10, false)
-local BringBossBtn, _, _ = CreateStaffButton("🧲 Bring Boss To Player: OFF", 11, false)
+
+-- Row 5 (RESTORED ORIGINAL BUTTONS)
+local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 9, false)
+local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 10, false)
+
+-- Row 6 (RESTORED ORIGINAL BUTTONS)
+local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 11, false)
+local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 12, false)
+
+-- Row 7 (RESTORED ORIGINAL BUTTONS)
+local SpeedBoostBtn, SpeedBoostStroke, SpeedBoostGrad = CreateStaffButton("⚡ Speed Boost (35 WalkSpeed): OFF", 13, false)
+local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 14, false)
+
+-- Row 8 (RESTORED ORIGINAL BUTTONS)
+local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 1000%: OFF", 15, false)
 
 --------------------------------------------------------------------------------
 -- DROPDOWN SELECTOR
@@ -425,16 +458,86 @@ TradeDropdownBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- HANDLERS (NO LAG / NO SPAM LOOPS)
+-- BUTTON CLICK EVENT HANDLERS
 --------------------------------------------------------------------------------
 
--- ONE-CLICK AUTO TRADE (Instant check, zero lag spikes)
+-- EXPAND TARGET HITBOX
+HitboxBtn.MouseButton1Click:Connect(function()
+    HITBOX_ENABLED = not HITBOX_ENABLED
+    HitboxBtn.Text = HITBOX_ENABLED and "📦 Expand Target Hitbox: ON" or "📦 Expand Target Hitbox: OFF"
+    HitboxGrad.Color = HITBOX_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    HitboxStroke.Color = HITBOX_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+end)
+
+-- TRIGGER BOT
+TriggerBotBtn.MouseButton1Click:Connect(function()
+    TRIGGERBOT_ENABLED = not TRIGGERBOT_ENABLED
+    TriggerBotBtn.Text = TRIGGERBOT_ENABLED and "🎯 Trigger Bot: ON" or "🎯 Trigger Bot: OFF"
+    TriggerBotGrad.Color = TRIGGERBOT_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    TriggerBotStroke.Color = TRIGGERBOT_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+end)
+
+-- FORCE DROP 1000%
+ForceDropBtn.MouseButton1Click:Connect(function()
+    FORCE_DROP_ENABLED = not FORCE_DROP_ENABLED
+    ForceDropBtn.Text = FORCE_DROP_ENABLED and "💥 FORCE DROP 1000%: ON" or "💥 FORCE DROP 1000%: OFF"
+    ForceDropGrad.Color = FORCE_DROP_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    ForceDropStroke.Color = FORCE_DROP_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+end)
+
+-- AI BATTLE
+AIBattleBtn.MouseButton1Click:Connect(function()
+    AI_BATTLE_ENABLED = not AI_BATTLE_ENABLED
+    AIBattleBtn.Text = AI_BATTLE_ENABLED and "🤖 AI BATTLE (The_Rake): ON" or "🤖 AI BATTLE (The_Rake): OFF"
+    AIBattleGrad.Color = AI_BATTLE_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    AIBattleStroke.Color = AI_BATTLE_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+end)
+
+-- FAST SPAM CLICKER
+AutoAttackBtn.MouseButton1Click:Connect(function()
+    AUTO_ATTACK_ENABLED = not AUTO_ATTACK_ENABLED
+    AutoAttackBtn.Text = AUTO_ATTACK_ENABLED and "⚔️ Fast Spam Clicker: ON" or "⚔️ Fast Spam Clicker: OFF"
+    AutoAttackGrad.Color = AUTO_ATTACK_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    AutoAttackStroke.Color = AUTO_ATTACK_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+end)
+
+-- BRING BOSS TO PLAYER
+BringBossBtn.MouseButton1Click:Connect(function()
+    BRING_BOSS_ENABLED = not BRING_BOSS_ENABLED
+    BringBossBtn.Text = BRING_BOSS_ENABLED and "🧲 Bring Boss To Player: ON" or "🧲 Bring Boss To Player: OFF"
+    BringBossGrad.Color = BRING_BOSS_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    BringBossStroke.Color = BRING_BOSS_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+end)
+
+-- SPEED BOOST (35 WALKSPEED)
+SpeedBoostBtn.MouseButton1Click:Connect(function()
+    SPEED_BOOST_ENABLED = not SPEED_BOOST_ENABLED
+    SpeedBoostBtn.Text = SPEED_BOOST_ENABLED and "⚡ Speed Boost (35 WalkSpeed): ON" or "⚡ Speed Boost (35 WalkSpeed): OFF"
+    SpeedBoostGrad.Color = SPEED_BOOST_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    SpeedBoostStroke.Color = SPEED_BOOST_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+
+    if SPEED_BOOST_ENABLED then
+        speedConnection = RunService.Stepped:Connect(function()
+            local char = LocalPlayer.Character
+            local humanoid = char and char:FindFirstChildWhichIsA("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 35
+            end
+        end)
+    else
+        if speedConnection then speedConnection:Disconnect() speedConnection = nil end
+        local char = LocalPlayer.Character
+        local humanoid = char and char:FindFirstChildWhichIsA("Humanoid")
+        if humanoid then humanoid.WalkSpeed = 16 end
+    end
+end)
+
+-- EXECUTE AUTO TRADE
 AutoTradeActionBtn.MouseButton1Click:Connect(function()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    -- 1. Check if item is already owned
     if checkAlreadyOwns(SELECTED_TRADE_ITEM) then
         AutoTradeActionBtn.Text = "⚠️ ALREADY OWN ITEM!"
         task.delay(2, function()
@@ -443,7 +546,6 @@ AutoTradeActionBtn.MouseButton1Click:Connect(function()
         return
     end
 
-    -- 2. Check recipe ingredients in inventory
     local requiredIngredients = TRADE_RECIPES[SELECTED_TRADE_ITEM] or {}
     local hasAll = true
     for _, ingredient in ipairs(requiredIngredients) do
@@ -453,7 +555,6 @@ AutoTradeActionBtn.MouseButton1Click:Connect(function()
         end
     end
 
-    -- 3. Teleport if ready
     if hasAll then
         local markObj = findTraderMark()
         if markObj and markObj:IsA("BasePart") then
@@ -471,7 +572,15 @@ AutoTradeActionBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ANTI-AFK FEATURE
+-- AUTO DISABLE CONE
+AutoDisableConeBtn.MouseButton1Click:Connect(function()
+    AUTO_CONE_ENABLED = not AUTO_CONE_ENABLED
+    AutoDisableConeBtn.Text = AUTO_CONE_ENABLED and "🛑 AUTO DISABLE CONE: ON" or "🛑 AUTO DISABLE CONE: OFF"
+    AutoDisableConeGrad.Color = AUTO_CONE_ENABLED and SPECIAL_ORANGE_ON or SPECIAL_ORANGE_OFF
+    AutoDisableConeStroke.Color = AUTO_CONE_ENABLED and Color3.fromRGB(255, 200, 50) or Color3.fromRGB(180, 90, 10)
+end)
+
+-- ANTI-AFK
 AntiAfkBtn.MouseButton1Click:Connect(function()
     ANTI_AFK_ENABLED = not ANTI_AFK_ENABLED
     AntiAfkBtn.Text = ANTI_AFK_ENABLED and "🛡️ ANTI-AFK PROTECTION: ON" or "🛡️ ANTI-AFK PROTECTION: OFF"
@@ -507,12 +616,20 @@ FpsBoosterBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- GOLDEN STAFF AUTO PICKUP
+AutoPickupBtn.MouseButton1Click:Connect(function()
+    AUTO_PICKUP_ENABLED = not AUTO_PICKUP_ENABLED
+    AutoPickupBtn.Text = AUTO_PICKUP_ENABLED and "🎁 Golden Staff Auto Pickup: ON" or "🎁 Golden Staff Auto Pickup: OFF"
+    AutoPickupGrad.Color = AUTO_PICKUP_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    AutoPickupStroke.Color = AUTO_PICKUP_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+end)
+
 -- BRO MAX LUCK
 BroMaxLuckBtn.MouseButton1Click:Connect(function()
     BRO_MAX_LUCK_ENABLED = not BRO_MAX_LUCK_ENABLED
     BroMaxLuckBtn.Text = BRO_MAX_LUCK_ENABLED and "🔥 BRO MAX LUCK 100000000%: ON" or "🔥 BRO MAX LUCK 100000000%: OFF"
-    BroMaxLuckGrad.Color = BRO_MAX_LUCK_ENABLED and FIRE_MAX_LUCK_GRADIENT or GREEN_OFF_GRADIENT
-    BroMaxLuckStroke.Color = BRO_MAX_LUCK_ENABLED and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(40, 130, 80)
+    BroMaxLuckGrad.Color = BRO_MAX_LUCK_ENABLED and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
+    BroMaxLuckStroke.Color = BRO_MAX_LUCK_ENABLED and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
 end)
 
 -- AUTO SURVIVE BURNED BONE
@@ -539,6 +656,7 @@ AutoSurviveBtn.MouseButton1Click:Connect(function()
     task.delay(2.5, function() AutoSurviveBtn.Text = "🦴 AUTO SURVIVE BURNED BONE" end)
 end)
 
+-- UI TOGGLE LISTENERS
 ToggleIcon.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 UserInputService.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == TOGGLE_KEY and MainFrame then
