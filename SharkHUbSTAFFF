@@ -114,6 +114,20 @@ local function triggerGiftRainAndLoot(multiplier)
     end
 end
 
+local function getDropContainers()
+    local containers = {}
+    
+    local rsDrops = ReplicatedStorage:FindFirstChild("Drops")
+    if rsDrops then table.insert(containers, rsDrops) end
+    table.insert(containers, ReplicatedStorage)
+    
+    local wsDrops = Workspace:FindFirstChild("Drops")
+    if wsDrops then table.insert(containers, wsDrops) end
+    table.insert(containers, Workspace)
+    
+    return containers
+end
+
 local function playerHasItem(itemName)
     local char = LocalPlayer.Character
     local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -272,18 +286,19 @@ Tasks.Radar = task.spawn(function()
         if RadarFrame.Visible then
             local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
-                local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace
                 local closestItem, closestDistance = nil, math.huge
-                for _, item in ipairs(dropsFolder:GetChildren()) do
-                    local matchedName = nil
-                    for tName, _ in pairs(TARGET_ITEMS_LOOKUP) do
-                        if item.Name:lower():find(tName) then matchedName = tName break end
-                    end
-                    if matchedName then
-                        local part = item:IsA("BasePart") and item or item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
-                        if part then
-                            local dist = (hrp.Position - part.Position).Magnitude
-                            if dist < closestDistance then closestDistance = dist closestItem = matchedName end
+                for _, container in ipairs(getDropContainers()) do
+                    for _, item in ipairs(container:GetChildren()) do
+                        local matchedName = nil
+                        for tName, _ in pairs(TARGET_ITEMS_LOOKUP) do
+                            if item.Name:lower():find(tName) then matchedName = tName break end
+                        end
+                        if matchedName then
+                            local part = item:IsA("BasePart") and item or item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
+                            if part then
+                                local dist = (hrp.Position - part.Position).Magnitude
+                                if dist < closestDistance then closestDistance = dist closestItem = matchedName end
+                            end
                         end
                     end
                 end
@@ -291,7 +306,7 @@ Tasks.Radar = task.spawn(function()
                     RadarItemName.Text = "🎁 " .. closestItem
                     RadarItemInfo.Text = string.format("Distance: %d studs | Chance: %s", math.floor(closestDistance), ITEM_PROBABILITIES[closestItem] or "40%")
                 else
-                    RadarItemName.Text = "🎁 No Target Drops Nearby" RadarItemInfo.Text = "Scanning workspace..."
+                    RadarItemName.Text = "🎁 No Target Drops Nearby" RadarItemInfo.Text = "Scanning workspace & ReplicatedStorage..."
                 end
             end
         end
@@ -367,7 +382,7 @@ BroMaxLuckBtn.MouseButton1Click:Connect(function()
     BroMaxLuckGrad.Color = Features.BroMaxLuck and FIRE_MAX_LUCK_GRADIENT or GREEN_OFF_GRADIENT
     BroMaxLuckStroke.Color = Features.BroMaxLuck and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(40, 130, 80)
     if Features.BroMaxLuck then
-        Tasks.BroMaxLuck = task.spawn(function() while Features.BroMaxLuck do triggerGiftRainAndLootAndSpawnDrop(100000000) task.wait(0.15) end end)
+        Tasks.BroMaxLuck = task.spawn(function() while Features.BroMaxLuck do triggerGiftRainAndLoot(100000000) task.wait(0.15) end end)
     elseif Tasks.BroMaxLuck then task.cancel(Tasks.BroMaxLuck) Tasks.BroMaxLuck = nil end
 end)
 
@@ -441,7 +456,7 @@ AutoTradeToggleBtn.MouseButton1Click:Connect(function()
                     local ready = true
                     for _, req in ipairs(reqs) do if not playerHasItem(req) then ready = false break end end
                     if ready then
-                        local mark = Workspace:FindFirstChild("Mark", true)
+                        local mark = Workspace:FindFirstChild("Mark", true) or ReplicatedStorage:FindFirstChild("Mark", true)
                         if mark and mark:IsA("BasePart") then hrp.CFrame = mark.CFrame * CFrame.new(0, 3, 0) end
                     end
                 end
@@ -466,12 +481,13 @@ AutoPickupBtn.MouseButton1Click:Connect(function()
             while Features.AutoPickup do
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                 if hrp then
-                    local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace
-                    for _, obj in ipairs(dropsFolder:GetChildren()) do
-                        if not Features.UseWhitelist or TARGET_ITEMS_LOOKUP[obj.Name:lower()] then
-                            local h = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                            if h then
-                                if firetouchinterest then firetouchinterest(hrp, h, 0) firetouchinterest(hrp, h, 1) else h.CFrame = hrp.CFrame end
+                    for _, container in ipairs(getDropContainers()) do
+                        for _, obj in ipairs(container:GetChildren()) do
+                            if not Features.UseWhitelist or TARGET_ITEMS_LOOKUP[obj.Name:lower()] then
+                                local h = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+                                if h then
+                                    if firetouchinterest then firetouchinterest(hrp, h, 0) firetouchinterest(hrp, h, 1) else h.CFrame = hrp.CFrame end
+                                end
                             end
                         end
                     end
@@ -652,14 +668,15 @@ end)
 DebugPickupBtn.MouseButton1Click:Connect(function()
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then DebugPickupBtn.Text = "⚠️ NO CHAR/HRP" task.delay(2, function() DebugPickupBtn.Text = "🐛 DEBUG AUTO PICKUP" end) return end
-    local dropsFolder = Workspace:FindFirstChild("Drops") or Workspace
     local pulledCount = 0
-    for _, obj in ipairs(dropsFolder:GetChildren()) do
-        if not Features.UseWhitelist or TARGET_ITEMS_LOOKUP[obj.Name:lower()] then
-            local handle = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-            if handle then
-                pulledCount = pulledCount + 1 handle.CFrame = hrp.CFrame
-                if firetouchinterest then firetouchinterest(hrp, handle, 0) firetouchinterest(hrp, handle, 1) end
+    for _, container in ipairs(getDropContainers()) do
+        for _, obj in ipairs(container:GetChildren()) do
+            if not Features.UseWhitelist or TARGET_ITEMS_LOOKUP[obj.Name:lower()] then
+                local handle = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+                if handle then
+                    pulledCount = pulledCount + 1 handle.CFrame = hrp.CFrame
+                    if firetouchinterest then firetouchinterest(hrp, handle, 0) firetouchinterest(hrp, handle, 1) end
+                end
             end
         end
     end
