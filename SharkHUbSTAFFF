@@ -1,4 +1,4 @@
--- Shark Hub V4.5 | Ultimate Master Edition (Full V3.70 + V4.0 Restoration)
+-- Shark Hub V4.6 | Ultimate Edition (Speed Charger + No Regen)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -7,7 +7,6 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local StarterPlayer = game:GetService("StarterPlayer")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -44,7 +43,7 @@ local TOGGLE_KEY = Enum.KeyCode.RightControl
 local Features = {
     BroMaxLuck = false, AutoDisableCone = false, AutoTrade = false,
     AIBattle = false, AutoAttack = false, BringBoss = false, ExpandHitbox = false,
-    SpeedBoost = false, AutoPickup = false, TriggerBot = false, AutoEscape = false,
+    AutoPickup = false, TriggerBot = false, AutoEscape = false,
     BringRakoof = false, ForceDrop = false, UseWhitelist = true,
     Luck250 = false, Luck500 = false, Luck750 = false, Luck1000 = false
 }
@@ -52,6 +51,7 @@ local Features = {
 local SELECTED_TRADE_ITEM = "SoulSurvivor"
 local visitedCones = {}
 local Connections, Tasks = {}, {}
+local currentSetSpeed = nil
 
 --------------------------------------------------------------------------------
 -- COLOR GRADIENTS
@@ -108,54 +108,6 @@ local function updateRemoteCache()
 end
 updateRemoteCache()
 
--- OVERRIDDEN FAST REGEN SYSTEM
-local FastRegenConnection = nil
-
-local function applyRegenBoost()
-    -- 1. Update StarterPlayer template if accessible
-    local starterScripts = StarterPlayer:FindFirstChild("StarterCharacterScripts")
-    if starterScripts then
-        local healthScript = starterScripts:FindFirstChild("Health")
-        if healthScript then
-            local regenValue = healthScript:FindFirstChild("RegenRate") or healthScript:FindFirstChild("Regen")
-            if regenValue and regenValue:IsA("ValueBase") then
-                regenValue.Value = 100
-            end
-        end
-    end
-
-    -- 2. Destroy slow default script in active Character and hook ultra-fast loop
-    local char = LocalPlayer.Character
-    if char then
-        local oldHealth = char:FindFirstChild("Health")
-        if oldHealth then
-            local regenValue = oldHealth:FindFirstChild("RegenRate") or oldHealth:FindFirstChild("Regen")
-            if regenValue and regenValue:IsA("ValueBase") then
-                regenValue.Value = 100
-            end
-            pcall(function()
-                if oldHealth:IsA("BaseScript") then oldHealth.Disabled = true end
-                oldHealth:Destroy()
-            end)
-        end
-
-        -- Smooth frame-by-frame rapid heal loop
-        if Connections.FastRegen then Connections.FastRegen:Disconnect() end
-        Connections.FastRegen = RunService.Heartbeat:Connect(function()
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 and hum.Health < hum.MaxHealth then
-                hum.Health = math.min(hum.Health + 10, hum.MaxHealth)
-            end
-        end)
-    end
-end
-
--- Auto-apply fast regen whenever character respawns
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.5)
-    applyRegenBoost()
-end)
-
 local function findTargetModel(query)
     local qLower = query:lower()
     for _, obj in ipairs(Workspace:GetChildren()) do
@@ -168,7 +120,6 @@ local function findTargetModel(query)
 end
 
 local function runSlashLoop10x()
-    applyRegenBoost()
     if #cachedRemotes.GiftRain == 0 and #cachedRemotes.LootItem == 0 and #cachedRemotes.SpawnItem == 0 then updateRemoteCache() end
 
     for iteration = 1, 10 do
@@ -241,7 +192,7 @@ local function executeSpamClick()
 end
 
 --------------------------------------------------------------------------------
--- GUI CONSTRUCTION
+-- MAIN HUB GUI
 --------------------------------------------------------------------------------
 if PlayerGui:FindFirstChild("SharkHubStaffGui") then PlayerGui.SharkHubStaffGui:Destroy() end
 
@@ -345,6 +296,109 @@ local function updateStateUI(btn, stroke, grad, state, textOn, textOff)
 end
 
 --------------------------------------------------------------------------------
+-- DEDICATED SPEED CHARGER GUI (SEPARATE FLOATING WINDOW)
+--------------------------------------------------------------------------------
+if PlayerGui:FindFirstChild("SharkHubSpeedGui") then PlayerGui.SharkHubSpeedGui:Destroy() end
+
+local SpeedGui = Instance.new("ScreenGui")
+SpeedGui.Name = "SharkHubSpeedGui"
+SpeedGui.ResetOnSpawn = false
+SpeedGui.DisplayOrder = 105
+SpeedGui.Parent = PlayerGui
+
+local SpeedFrame = Instance.new("Frame")
+SpeedFrame.Size = UDim2.new(0, 240, 0, 135)
+SpeedFrame.Position = UDim2.new(0.02, 0, 0.35, 0)
+SpeedFrame.BackgroundColor3 = Color3.fromRGB(18, 52, 32)
+SpeedFrame.ZIndex = 100
+SpeedFrame.Parent = SpeedGui
+Instance.new("UICorner", SpeedFrame).CornerRadius = UDim.new(0, 12)
+local SpeedFrameStroke = Instance.new("UIStroke", SpeedFrame)
+SpeedFrameStroke.Thickness = 2
+SpeedFrameStroke.Color = Color3.fromRGB(0, 255, 150)
+
+-- Draggable Logic for Speed GUI
+local speedDragging, speedDragInput, speedDragStart, speedStartPos
+SpeedFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        speedDragging = true speedDragStart = input.Position speedStartPos = SpeedFrame.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then speedDragging = false end end)
+    end
+end)
+SpeedFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then speedDragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == speedDragInput and speedDragging then
+        local delta = input.Position - speedDragStart
+        SpeedFrame.Position = UDim2.new(speedStartPos.X.Scale, speedStartPos.X.Offset + delta.X, speedStartPos.Y.Scale, speedStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+local SpeedTitleBar = Instance.new("TextLabel")
+SpeedTitleBar.Size = UDim2.new(1, 0, 0, 32)
+SpeedTitleBar.BackgroundTransparency = 1
+SpeedTitleBar.Text = "⚡ SPEED CHARGER V1"
+SpeedTitleBar.TextColor3 = Color3.fromRGB(0, 255, 170)
+SpeedTitleBar.Font = Enum.Font.GothamBold
+SpeedTitleBar.TextSize = 12
+SpeedTitleBar.Parent = SpeedFrame
+
+local SpeedInput = Instance.new("TextBox")
+SpeedInput.Size = UDim2.new(0.85, 0, 0, 34)
+SpeedInput.Position = UDim2.new(0.075, 0, 0.30, 0)
+SpeedInput.BackgroundColor3 = Color3.fromRGB(12, 36, 22)
+SpeedInput.Text = "50"
+SpeedInput.PlaceholderText = "Type Speed Amount..."
+SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedInput.Font = Enum.Font.GothamBold
+SpeedInput.TextSize = 13
+SpeedInput.Parent = SpeedFrame
+Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 8)
+local SpeedInputStroke = Instance.new("UIStroke", SpeedInput)
+SpeedInputStroke.Thickness = 1
+SpeedInputStroke.Color = Color3.fromRGB(0, 255, 150)
+
+local ApplySpeedBtn = Instance.new("TextButton")
+ApplySpeedBtn.Size = UDim2.new(0.85, 0, 0, 32)
+ApplySpeedBtn.Position = UDim2.new(0.075, 0, 0.65, 0)
+ApplySpeedBtn.BackgroundColor3 = Color3.fromRGB(22, 62, 38)
+ApplySpeedBtn.Text = "⚡ APPLY SPEED"
+ApplySpeedBtn.TextColor3 = Color3.fromRGB(0, 255, 170)
+ApplySpeedBtn.Font = Enum.Font.GothamBold
+ApplySpeedBtn.TextSize = 12
+ApplySpeedBtn.Parent = SpeedFrame
+Instance.new("UICorner", ApplySpeedBtn).CornerRadius = UDim.new(0, 8)
+local ApplySpeedGrad = Instance.new("UIGradient")
+ApplySpeedGrad.Color = GREEN_ON_GRADIENT
+ApplySpeedGrad.Rotation = 90
+ApplySpeedGrad.Parent = ApplySpeedBtn
+
+ApplySpeedBtn.MouseButton1Click:Connect(function()
+    local val = tonumber(SpeedInput.Text)
+    if val then
+        currentSetSpeed = val
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = val end
+        ApplySpeedBtn.Text = "✅ SPEED SET: " .. val
+        task.delay(1.5, function() ApplySpeedBtn.Text = "⚡ APPLY SPEED" end)
+    else
+        ApplySpeedBtn.Text = "⚠️ INVALID NUMBER"
+        task.delay(1.5, function() ApplySpeedBtn.Text = "⚡ APPLY SPEED" end)
+    end
+end)
+
+-- Continuous walkspeed locker loop
+Connections.SpeedLock = RunService.Heartbeat:Connect(function()
+    if currentSetSpeed then
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum and hum.WalkSpeed ~= currentSetSpeed then
+            hum.WalkSpeed = currentSetSpeed
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
 -- DROP RADAR GUI
 --------------------------------------------------------------------------------
 local RadarFrame = Instance.new("Frame")
@@ -402,20 +456,19 @@ Tasks.Radar = task.spawn(function()
 end)
 
 --------------------------------------------------------------------------------
--- COMPLETE BUTTON MATRIX
+-- MAIN HUB BUTTON MATRIX
 --------------------------------------------------------------------------------
 
 local BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad = CreateStaffButton("🔥 BRO MAX LUCK 100000000%: OFF", 1, false)
-local FixRegenBtn, FixRegenStroke, FixRegenGrad = CreateStaffButton("❤️ SET REGEN TO 100 (FAST HEAL)", 2, false)
-local SlashLoopBtn, SlashLoopStroke, SlashLoopGrad = CreateStaffButton("⚡ EXECUTE SLASH 10X LOOP", 3, false)
-local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 4, false)
+local SlashLoopBtn, SlashLoopStroke, SlashLoopGrad = CreateStaffButton("⚡ EXECUTE SLASH 10X LOOP", 2, false)
+local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 3, false)
 AutoDisableConeGrad.Color = SPECIAL_ORANGE_OFF AutoDisableConeStroke.Color = Color3.fromRGB(255, 170, 0)
 
-local AutoSurviveBtn, AutoSurviveStroke, AutoSurviveGrad = CreateStaffButton("🦴 AUTO SURVIVE ASHBOUND (BURNED BONE)", 5, false)
+local AutoSurviveBtn, AutoSurviveStroke, AutoSurviveGrad = CreateStaffButton("🦴 AUTO SURVIVE ASHBOUND (BURNED BONE)", 4, false)
 AutoSurviveGrad.Color = GRAY_WHITE_GRADIENT AutoSurviveStroke.Color = Color3.fromRGB(200, 200, 200) AutoSurviveBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
 
-local AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 AUTO TRADE (SoulSurvivor): OFF", 6, false)
-local TradeDropdownBtn, _, _ = CreateStaffButton("📜 SELECT TRADE ITEM ▼", 7, false)
+local AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 AUTO TRADE (SoulSurvivor): OFF", 5, false)
+local TradeDropdownBtn, _, _ = CreateStaffButton("📜 SELECT TRADE ITEM ▼", 6, false)
 
 -- Trade Dropdown Menu Frame
 local DropdownListFrame = Instance.new("ScrollingFrame")
@@ -437,37 +490,30 @@ end
 TradeDropdownBtn.MouseButton1Click:Connect(function() DropdownListFrame.Visible = not DropdownListFrame.Visible end)
 
 -- STANDARD HUB BUTTON MATRIX
-local TriggerCalamityBtn, _, _ = CreateStaffButton("⚡ TRIGGER CALAMITY MODE", 8, false)
-local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 9, false)
-local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 10, false)
-local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 11, false)
-local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 12, false)
-local SpeedBtn, SpeedStroke, SpeedGrad = CreateStaffButton("⚡ Speed Boost (50 WalkSpeed): OFF", 13, false)
-local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 14, false)
-local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 15, false)
-local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 1000%: OFF", 16, false)
-local ToolRenamerBtn, _, _ = CreateStaffButton("✏️ RENAME ALL TOOLS", 17, false)
-local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 18, false)
-local Luck500Btn, Luck500Stroke, Luck500Grad = CreateStaffButton("🔥 500% WORLD LUCK: OFF", 19, false)
-local Luck750Btn, Luck750Stroke, Luck750Grad = CreateStaffButton("💎 750% WORLD LUCK: OFF", 20, false)
-local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 21, false)
-local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 22, false)
-local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 23, false)
-local StaminaBtn, _, _ = CreateStaffButton("⚡ MAX STAMINA (SET REMOTES)", 24, false)
-local PredictDropBtn, _, _ = CreateStaffButton("🔮 CHECK NEXT ITEM DROP", 25, false)
-local PickupFilterBtn, PickupFilterStroke, PickupFilterGrad = CreateStaffButton("🎯 PICKUP FILTER: ON", 26, true)
-local ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad = CreateStaffButton("🔮 TOGGLE DROP RADAR GUI: ON", 27, true)
-local DebugPickupBtn, _, _ = CreateStaffButton("🐛 DEBUG AUTO PICKUP", 28, false)
+local TriggerCalamityBtn, _, _ = CreateStaffButton("⚡ TRIGGER CALAMITY MODE", 7, false)
+local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 8, false)
+local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 9, false)
+local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 10, false)
+local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 11, false)
+local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 12, false)
+local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 13, false)
+local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 1000%: OFF", 14, false)
+local ToolRenamerBtn, _, _ = CreateStaffButton("✏️ RENAME ALL TOOLS", 15, false)
+local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 16, false)
+local Luck500Btn, Luck500Stroke, Luck500Grad = CreateStaffButton("🔥 500% WORLD LUCK: OFF", 17, false)
+local Luck750Btn, Luck750Stroke, Luck750Grad = CreateStaffButton("💎 750% WORLD LUCK: OFF", 18, false)
+local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 19, false)
+local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 20, false)
+local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 21, false)
+local StaminaBtn, _, _ = CreateStaffButton("⚡ MAX STAMINA (SET REMOTES)", 22, false)
+local PredictDropBtn, _, _ = CreateStaffButton("🔮 CHECK NEXT ITEM DROP", 23, false)
+local PickupFilterBtn, PickupFilterStroke, PickupFilterGrad = CreateStaffButton("🎯 PICKUP FILTER: ON", 24, true)
+local ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad = CreateStaffButton("🔮 TOGGLE DROP RADAR GUI: ON", 25, true)
+local DebugPickupBtn, _, _ = CreateStaffButton("🐛 DEBUG AUTO PICKUP", 26, false)
 
 --------------------------------------------------------------------------------
 -- FEATURE LOGIC BINDINGS
 --------------------------------------------------------------------------------
-
-FixRegenBtn.MouseButton1Click:Connect(function()
-    applyRegenBoost()
-    FixRegenBtn.Text = "⚡ ULTRA-FAST HEAL ACTIVE!"
-    task.delay(2, function() FixRegenBtn.Text = "❤️ SET REGEN TO 100 (FAST HEAL)" end)
-end)
 
 SlashLoopBtn.MouseButton1Click:Connect(function()
     SlashLoopBtn.Text = "⚡ RUNNING (10 CYCLES)..."
@@ -578,29 +624,37 @@ ToggleRadarBtn.MouseButton1Click:Connect(function()
     updateStateUI(ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad, RadarFrame.Visible, "🔮 TOGGLE DROP RADAR GUI: ON", "🔮 TOGGLE DROP RADAR GUI: OFF")
 end)
 
+-- AUTO PICKUP (RUNSERVICE HEARTBEAT / FRAME-EXACT ~0.001s)
 AutoPickupBtn.MouseButton1Click:Connect(function()
     Features.AutoPickup = not Features.AutoPickup
     updateStateUI(AutoPickupBtn, AutoPickupStroke, AutoPickupGrad, Features.AutoPickup, "🎁 Golden Staff Auto Pickup: ON", "🎁 Golden Staff Auto Pickup: OFF")
     if Features.AutoPickup then
-        Tasks.Pickup = task.spawn(function()
-            while Features.AutoPickup do
-                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    for _, container in ipairs(getDropContainers()) do
-                        for _, obj in ipairs(container:GetChildren()) do
-                            if not Features.UseWhitelist or TARGET_ITEMS_LOOKUP[obj.Name:lower()] then
-                                local h = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                                if h then
-                                    if firetouchinterest then firetouchinterest(hrp, h, 0) firetouchinterest(hrp, h, 1) else h.CFrame = hrp.CFrame end
-                                end
+        Connections.Pickup = RunService.Heartbeat:Connect(function()
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
+            for _, container in ipairs(getDropContainers()) do
+                for _, obj in ipairs(container:GetChildren()) do
+                    if not Features.UseWhitelist or TARGET_ITEMS_LOOKUP[obj.Name:lower()] then
+                        local h = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+                        if h then
+                            if firetouchinterest then
+                                firetouchinterest(hrp, h, 0)
+                                firetouchinterest(hrp, h, 1)
+                            else
+                                h.CFrame = hrp.CFrame
                             end
                         end
                     end
                 end
-                task.wait(0.1)
             end
         end)
-    elseif Tasks.Pickup then task.cancel(Tasks.Pickup) Tasks.Pickup = nil end
+    else
+        if Connections.Pickup then
+            Connections.Pickup:Disconnect()
+            Connections.Pickup = nil
+        end
+    end
 end)
 
 AutoAttackBtn.MouseButton1Click:Connect(function()
@@ -654,13 +708,6 @@ HitboxBtn.MouseButton1Click:Connect(function()
             if doofPart then doofPart.Size = Vector3.new(20, 20, 20) doofPart.Transparency = 0.7 end
         end)
     elseif Connections.Hitbox then Connections.Hitbox:Disconnect() Connections.Hitbox = nil end
-end)
-
-SpeedBtn.MouseButton1Click:Connect(function()
-    Features.SpeedBoost = not Features.SpeedBoost
-    updateStateUI(SpeedBtn, SpeedStroke, SpeedGrad, Features.SpeedBoost, "⚡ Speed Boost: ON", "⚡ Speed Boost (50 WalkSpeed): OFF")
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.WalkSpeed = Features.SpeedBoost and 50 or 16 end
 end)
 
 TriggerBotBtn.MouseButton1Click:Connect(function()
@@ -791,6 +838,6 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == TOGGLE_KEY and MainFrame then
-        MainFrame.Visible = not MainFrame.Visible RadarFrame.Visible = MainFrame.Visible
+        MainFrame.Visible = not MainFrame.Visible RadarFrame.Visible = MainFrame.Visible SpeedFrame.Visible = MainFrame.Visible
     end
 end)
