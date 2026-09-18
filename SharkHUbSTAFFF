@@ -18,7 +18,7 @@ local TARGET_ITEMS_LIST = {
     "GoldenApple", "LegendaryEnergy", "IgnitionFlame", 
     "SnowFlakes", "CorruptedHalo", "StrangeBar", "BurnedBone",
     "Penguin", "PenguinPart", "PenguinParts", "Mesh", "Meshes",
-    "CrucibleSword", "Imposta", "NullBlock", "TrainerCap", "SlashProjectile2"
+    "CrucibleSword", "Imposta", "NullBlock", "TrainerCap", "SlashProjectile2" "Rifle" "Coin"
 }
 
 local TARGET_ITEMS_LOOKUP = {}
