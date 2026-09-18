@@ -142,31 +142,27 @@ local function findTargetModel(query)
     return nil, nil
 end
 
-local function runBroMaxLuckCycle()
+local function runSlashLoop10x()
     applyRegenBoost()
     if #cachedRemotes.GiftRain == 0 and #cachedRemotes.LootItem == 0 and #cachedRemotes.SpawnItem == 0 then updateRemoteCache() end
 
     for iteration = 1, 10 do
-        -- 1. Fire SpawnItem Remotes
         for _, obj in ipairs(cachedRemotes.SpawnItem) do
             pcall(function()
                 if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2") else obj:FireServer("SlashProjectile2") end
             end)
         end
-        -- 2. Fire GiftRain Remotes
         for _, obj in ipairs(cachedRemotes.GiftRain) do
             pcall(function()
-                if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2", 100000000) else obj:FireServer("SlashProjectile2", 100000000) end
+                if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2", 100) else obj:FireServer("SlashProjectile2", 100) end
             end)
         end
-        -- 3. Fire LootItem Remotes
         for _, obj in ipairs(cachedRemotes.LootItem) do
             pcall(function()
                 if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2") else obj:FireServer("SlashProjectile2") end
             end)
         end
 
-        -- 4. Teleport SlashProjectile2 objects to The_Rake
         local _, rakePart = findTargetModel(RAKE_NAME)
         if rakePart then
             local rakeCFrame = rakePart.CFrame
@@ -196,15 +192,12 @@ end
 
 local function getDropContainers()
     local containers = {}
-    
     local rsDrops = ReplicatedStorage:FindFirstChild("Drops")
     if rsDrops then table.insert(containers, rsDrops) end
     table.insert(containers, ReplicatedStorage)
-    
     local wsDrops = Workspace:FindFirstChild("Drops")
     if wsDrops then table.insert(containers, wsDrops) end
     table.insert(containers, Workspace)
-    
     return containers
 end
 
@@ -384,19 +377,21 @@ Tasks.Radar = task.spawn(function()
 end)
 
 --------------------------------------------------------------------------------
--- COMPLETE BUTTON MATRIX MATRIX (V3.70 SPECIALS + V4.0 BUTTONS)
+-- COMPLETE BUTTON MATRIX
 --------------------------------------------------------------------------------
 
 -- V3.70 SPECIAL RECREATED BUTTONS
 local BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad = CreateStaffButton("🔥 BRO MAX LUCK 100000000%: OFF", 1, false)
-local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 2, false)
+local FixRegenBtn, FixRegenStroke, FixRegenGrad = CreateStaffButton("❤️ SET REGEN TO 100", 2, false)
+local SlashLoopBtn, SlashLoopStroke, SlashLoopGrad = CreateStaffButton("⚡ EXECUTE SLASH 10X LOOP", 3, false)
+local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 4, false)
 AutoDisableConeGrad.Color = SPECIAL_ORANGE_OFF AutoDisableConeStroke.Color = Color3.fromRGB(255, 170, 0)
 
-local AutoSurviveBtn, AutoSurviveStroke, AutoSurviveGrad = CreateStaffButton("🦴 AUTO SURVIVE ASHBOUND (BURNED BONE)", 3, false)
+local AutoSurviveBtn, AutoSurviveStroke, AutoSurviveGrad = CreateStaffButton("🦴 AUTO SURVIVE ASHBOUND (BURNED BONE)", 5, false)
 AutoSurviveGrad.Color = GRAY_WHITE_GRADIENT AutoSurviveStroke.Color = Color3.fromRGB(200, 200, 200) AutoSurviveBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
 
-local AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 AUTO TRADE (SoulSurvivor): OFF", 4, false)
-local TradeDropdownBtn, _, _ = CreateStaffButton("📜 SELECT TRADE ITEM ▼", 5, false)
+local AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 AUTO TRADE (SoulSurvivor): OFF", 6, false)
+local TradeDropdownBtn, _, _ = CreateStaffButton("📜 SELECT TRADE ITEM ▼", 7, false)
 
 -- Trade Dropdown Menu Frame
 local DropdownListFrame = Instance.new("ScrollingFrame")
@@ -418,33 +413,46 @@ end
 TradeDropdownBtn.MouseButton1Click:Connect(function() DropdownListFrame.Visible = not DropdownListFrame.Visible end)
 
 -- STANDARD HUB BUTTON MATRIX
-local TriggerCalamityBtn, _, _ = CreateStaffButton("⚡ TRIGGER CALAMITY MODE", 6, false)
-local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 7, false)
-local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 8, false)
-local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 9, false)
-local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 10, false)
-local SpeedBtn, SpeedStroke, SpeedGrad = CreateStaffButton("⚡ Speed Boost (50 WalkSpeed): OFF", 11, false)
-local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 12, false)
-local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 13, false)
-local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 1000%: OFF", 14, false)
-local ToolRenamerBtn, _, _ = CreateStaffButton("✏️ RENAME ALL TOOLS", 15, false)
-local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 16, false)
-local Luck500Btn, Luck500Stroke, Luck500Grad = CreateStaffButton("🔥 500% WORLD LUCK: OFF", 17, false)
-local Luck750Btn, Luck750Stroke, Luck750Grad = CreateStaffButton("💎 750% WORLD LUCK: OFF", 18, false)
-local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 19, false)
-local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 20, false)
-local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 21, false)
-local StaminaBtn, _, _ = CreateStaffButton("⚡ MAX STAMINA (SET REMOTES)", 22, false)
-local PredictDropBtn, _, _ = CreateStaffButton("🔮 CHECK NEXT ITEM DROP", 23, false)
-local PickupFilterBtn, PickupFilterStroke, PickupFilterGrad = CreateStaffButton("🎯 PICKUP FILTER: ON", 24, true)
-local ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad = CreateStaffButton("🔮 TOGGLE DROP RADAR GUI: ON", 25, true)
-local DebugPickupBtn, _, _ = CreateStaffButton("🐛 DEBUG AUTO PICKUP", 26, false)
+local TriggerCalamityBtn, _, _ = CreateStaffButton("⚡ TRIGGER CALAMITY MODE", 8, false)
+local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 9, false)
+local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 10, false)
+local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 11, false)
+local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 12, false)
+local SpeedBtn, SpeedStroke, SpeedGrad = CreateStaffButton("⚡ Speed Boost (50 WalkSpeed): OFF", 13, false)
+local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 14, false)
+local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 15, false)
+local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 1000%: OFF", 16, false)
+local ToolRenamerBtn, _, _ = CreateStaffButton("✏️ RENAME ALL TOOLS", 17, false)
+local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 18, false)
+local Luck500Btn, Luck500Stroke, Luck500Grad = CreateStaffButton("🔥 500% WORLD LUCK: OFF", 19, false)
+local Luck750Btn, Luck750Stroke, Luck750Grad = CreateStaffButton("💎 750% WORLD LUCK: OFF", 20, false)
+local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 21, false)
+local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 22, false)
+local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 23, false)
+local StaminaBtn, _, _ = CreateStaffButton("⚡ MAX STAMINA (SET REMOTES)", 24, false)
+local PredictDropBtn, _, _ = CreateStaffButton("🔮 CHECK NEXT ITEM DROP", 25, false)
+local PickupFilterBtn, PickupFilterStroke, PickupFilterGrad = CreateStaffButton("🎯 PICKUP FILTER: ON", 26, true)
+local ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad = CreateStaffButton("🔮 TOGGLE DROP RADAR GUI: ON", 27, true)
+local DebugPickupBtn, _, _ = CreateStaffButton("🐛 DEBUG AUTO PICKUP", 28, false)
 
 --------------------------------------------------------------------------------
 -- FEATURE LOGIC BINDINGS
 --------------------------------------------------------------------------------
 
--- 1. BRO MAX LUCK
+-- NEW DEDICATED BUTTON BINDINGS
+FixRegenBtn.MouseButton1Click:Connect(function()
+    applyRegenBoost()
+    FixRegenBtn.Text = "✅ REGEN SET TO 100!"
+    task.delay(2, function() FixRegenBtn.Text = "❤️ SET REGEN TO 100" end)
+end)
+
+SlashLoopBtn.MouseButton1Click:Connect(function()
+    SlashLoopBtn.Text = "⚡ RUNNING (10 CYCLES)..."
+    runSlashLoop10x()
+    SlashLoopBtn.Text = "⚡ EXECUTE SLASH 10X LOOP"
+end)
+
+-- BRO MAX LUCK TOGGLE
 BroMaxLuckBtn.MouseButton1Click:Connect(function()
     Features.BroMaxLuck = not Features.BroMaxLuck
     BroMaxLuckBtn.Text = Features.BroMaxLuck and "🔥 BRO MAX LUCK 100M%: ON" or "🔥 BRO MAX LUCK 100000000%: OFF"
@@ -453,14 +461,14 @@ BroMaxLuckBtn.MouseButton1Click:Connect(function()
     if Features.BroMaxLuck then
         Tasks.BroMaxLuck = task.spawn(function()
             while Features.BroMaxLuck do
-                runBroMaxLuckCycle()
+                runSlashLoop10x()
                 task.wait(0.2)
             end
         end)
     elseif Tasks.BroMaxLuck then task.cancel(Tasks.BroMaxLuck) Tasks.BroMaxLuck = nil end
 end)
 
--- 2. AUTO SURVIVE ASHBOUND (BURNED BONE)
+-- AUTO SURVIVE ASHBOUND (BURNED BONE)
 AutoSurviveBtn.MouseButton1Click:Connect(function()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -479,7 +487,7 @@ AutoSurviveBtn.MouseButton1Click:Connect(function()
     task.delay(2.5, function() AutoSurviveBtn.Text = "🦴 AUTO SURVIVE ASHBOUND (BURNED BONE)" end)
 end)
 
--- 3. AUTO DISABLE CONE
+-- AUTO DISABLE CONE
 AutoDisableConeBtn.MouseButton1Click:Connect(function()
     Features.AutoDisableCone = not Features.AutoDisableCone
     AutoDisableConeBtn.Text = Features.AutoDisableCone and "🛑 AUTO DISABLE CONE: ON" or "🛑 AUTO DISABLE CONE: OFF"
@@ -516,7 +524,7 @@ AutoDisableConeBtn.MouseButton1Click:Connect(function()
     elseif Tasks.Cone then task.cancel(Tasks.Cone) Tasks.Cone = nil end
 end)
 
--- 4. AUTO TRADE
+-- AUTO TRADE
 AutoTradeToggleBtn.MouseButton1Click:Connect(function()
     Features.AutoTrade = not Features.AutoTrade
     AutoTradeToggleBtn.Text = string.format("🤝 AUTO TRADE (%s): %s", SELECTED_TRADE_ITEM, Features.AutoTrade and "ON" or "OFF")
