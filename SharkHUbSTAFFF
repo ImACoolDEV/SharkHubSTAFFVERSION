@@ -1,10 +1,15 @@
--- SharkHub V4.8 | Fully Nil-Guarded & Error-Proof Edition
+-- SharkHub V4.8 | Refined & Anti-Leak Edition
+
+-- Global Cleanup Handler (Prevents duplicated tasks/connections on re-execution)
+if getgenv().SharkHubCleanup then
+    pcall(getgenv().SharkHubCleanup)
+end
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local VirtualInputManager = pcall(function() return game:GetService("VirtualInputManager") end) and game:GetService("VirtualInputManager") or nil
 local VirtualUser = pcall(function() return game:GetService("VirtualUser") end) and game:GetService("VirtualUser") or nil
@@ -53,6 +58,21 @@ local SELECTED_TRADE_ITEM = "SoulSurvivor"
 local visitedCones = {}
 local Connections, Tasks = {}, {}
 local currentSetSpeed = nil
+local escapeDebounce = false
+
+-- Cleanup registration
+getgenv().SharkHubCleanup = function()
+    for name, conn in pairs(Connections) do
+        if conn then conn:Disconnect() end
+    end
+    for name, taskRef in pairs(Tasks) do
+        if taskRef then pcall(task.cancel, taskRef) end
+    end
+    table.clear(Connections)
+    table.clear(Tasks)
+    if PlayerGui:FindFirstChild("SharkHubStaffGui") then PlayerGui.SharkHubStaffGui:Destroy() end
+    if PlayerGui:FindFirstChild("SharkHubSpeedGui") then PlayerGui.SharkHubSpeedGui:Destroy() end
+end
 
 --------------------------------------------------------------------------------
 -- COLOR GRADIENTS
@@ -103,7 +123,11 @@ local function safeTouchInterest(part1, part2)
             firetouchinterest(part1, part2, 1)
         end)
     else
-        pcall(function() part2.CFrame = part1.CFrame end)
+        pcall(function()
+            if not part2.Anchored then
+                part2.CFrame = part1.CFrame
+            end
+        end)
     end
 end
 
@@ -151,6 +175,14 @@ local function findTargetModel(query)
         end
     end
     return nil, nil
+end
+
+local function isWhitelistedItem(name)
+    local nameLower = name:lower()
+    for key, _ in pairs(TARGET_ITEMS_LOOKUP) do
+        if nameLower:find(key) then return true end
+    end
+    return false
 end
 
 local function runSlashLoop10x()
@@ -221,8 +253,6 @@ end
 --------------------------------------------------------------------------------
 -- MAIN HUB GUI
 --------------------------------------------------------------------------------
-if PlayerGui:FindFirstChild("SharkHubStaffGui") then PlayerGui.SharkHubStaffGui:Destroy() end
-
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SharkHubStaffGui"
 ScreenGui.ResetOnSpawn = false
@@ -243,11 +273,13 @@ ToggleIcon.ZIndex = 200
 ToggleIcon.Parent = ScreenGui
 Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(0, 14)
 
-local iconDragging, iconDragInput, iconDragStart, iconStartPos
+local iconDragging, iconDragInput, iconDragStart, iconStartPos, hasDragged = false, nil, nil, nil, false
 ToggleIcon.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        iconDragging = true iconDragStart = input.Position iconStartPos = ToggleIcon.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then iconDragging = false end end)
+        iconDragging = true iconDragStart = input.Position iconStartPos = ToggleIcon.Position hasDragged = false
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then iconDragging = false end
+        end)
     end
 end)
 ToggleIcon.InputChanged:Connect(function(input)
@@ -256,6 +288,7 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if input == iconDragInput and iconDragging then
         local delta = input.Position - iconDragStart
+        if delta.Magnitude > 5 then hasDragged = true end
         ToggleIcon.Position = UDim2.new(iconStartPos.X.Scale, iconStartPos.X.Offset + delta.X, iconStartPos.Y.Scale, iconStartPos.Y.Offset + delta.Y)
     end
 end)
@@ -304,7 +337,9 @@ CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 local UIGridLayout = Instance.new("UIGridLayout")
 UIGridLayout.CellSize = UDim2.new(0.485, 0, 0, 44) UIGridLayout.CellPadding = UDim2.new(0.03, 0, 0, 10)
 UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder UIGridLayout.Parent = ScrollingFrame
-UIGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIGridLayout.AbsoluteContentSize.Y + 20) end)
+UIGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIGridLayout.AbsoluteContentSize.Y + 20)
+end)
 
 local function CreateStaffButton(text, order, initialActive)
     local btn = Instance.new("TextButton")
@@ -325,8 +360,6 @@ end
 --------------------------------------------------------------------------------
 -- SPEED CHARGER GUI
 --------------------------------------------------------------------------------
-if PlayerGui:FindFirstChild("SharkHubSpeedGui") then PlayerGui.SharkHubSpeedGui:Destroy() end
-
 local SpeedGui = Instance.new("ScreenGui")
 SpeedGui.Name = "SharkHubSpeedGui"
 SpeedGui.ResetOnSpawn = false
@@ -344,7 +377,7 @@ local SpeedFrameStroke = Instance.new("UIStroke", SpeedFrame)
 SpeedFrameStroke.Thickness = 2
 SpeedFrameStroke.Color = Color3.fromRGB(0, 255, 150)
 
-local speedDragging, speedDragInput, speedDragStart, speedStartPos
+local speedDragging, speedDragInput, speedDragStart, speedStartPos = false, nil, nil, nil
 SpeedFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         speedDragging = true speedDragStart = input.Position speedStartPos = SpeedFrame.Position
@@ -541,6 +574,7 @@ BroMaxLuckBtn.MouseButton1Click:Connect(function()
     BroMaxLuckGrad.Color = Features.BroMaxLuck and FIRE_MAX_LUCK_GRADIENT or GREEN_OFF_GRADIENT
     BroMaxLuckStroke.Color = Features.BroMaxLuck and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(40, 130, 80)
     if Features.BroMaxLuck then
+        if Tasks.BroMaxLuck then pcall(task.cancel, Tasks.BroMaxLuck) end
         Tasks.BroMaxLuck = task.spawn(function()
             while Features.BroMaxLuck do runSlashLoop10x() task.wait(0.2) end
         end)
@@ -573,6 +607,7 @@ AutoDisableConeBtn.MouseButton1Click:Connect(function()
 
     if Features.AutoDisableCone then
         table.clear(visitedCones)
+        if Tasks.Cone then pcall(task.cancel, Tasks.Cone) end
         Tasks.Cone = task.spawn(function()
             while Features.AutoDisableCone do
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -610,6 +645,7 @@ AutoTradeToggleBtn.MouseButton1Click:Connect(function()
     AutoTradeToggleBtn.Text = string.format("🤝 AUTO TRADE (%s): %s", SELECTED_TRADE_ITEM, Features.AutoTrade and "ON" or "OFF")
     updateStateUI(AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad, Features.AutoTrade, AutoTradeToggleBtn.Text, AutoTradeToggleBtn.Text)
     if Features.AutoTrade then
+        if Tasks.Trade then pcall(task.cancel, Tasks.Trade) end
         Tasks.Trade = task.spawn(function()
             while Features.AutoTrade do
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -628,7 +664,14 @@ AutoTradeToggleBtn.MouseButton1Click:Connect(function()
     elseif Tasks.Trade then pcall(task.cancel, Tasks.Trade) Tasks.Trade = nil end
 end)
 
-ToggleIcon.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible RadarFrame.Visible = MainFrame.Visible SpeedFrame.Visible = MainFrame.Visible end)
+ToggleIcon.MouseButton1Click:Connect(function()
+    if not hasDragged then
+        MainFrame.Visible = not MainFrame.Visible
+        RadarFrame.Visible = MainFrame.Visible
+        SpeedFrame.Visible = MainFrame.Visible
+    end
+end)
+
 ToggleRadarBtn.MouseButton1Click:Connect(function()
     RadarFrame.Visible = not RadarFrame.Visible
     updateStateUI(ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad, RadarFrame.Visible, "🔮 TOGGLE DROP RADAR GUI: ON", "🔮 TOGGLE DROP RADAR GUI: OFF")
@@ -637,6 +680,7 @@ end)
 AutoPickupBtn.MouseButton1Click:Connect(function()
     Features.AutoPickup = not Features.AutoPickup
     updateStateUI(AutoPickupBtn, AutoPickupStroke, AutoPickupGrad, Features.AutoPickup, "🎁 Golden Staff Auto Pickup: ON", "🎁 Golden Staff Auto Pickup: OFF")
+    if Connections.Pickup then Connections.Pickup:Disconnect() Connections.Pickup = nil end
     if Features.AutoPickup then
         Connections.Pickup = RunService.Heartbeat:Connect(function()
             local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -644,28 +688,28 @@ AutoPickupBtn.MouseButton1Click:Connect(function()
 
             for _, container in ipairs(getDropContainers()) do
                 for _, obj in ipairs(container:GetChildren()) do
-                    if not Features.UseWhitelist or TARGET_ITEMS_LOOKUP[obj.Name:lower()] then
+                    if not Features.UseWhitelist or isWhitelistedItem(obj.Name) then
                         local h = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
                         if h then safeTouchInterest(hrp, h) end
                     end
                 end
             end
         end)
-    else
-        if Connections.Pickup then Connections.Pickup:Disconnect() Connections.Pickup = nil end
     end
 end)
 
 AutoAttackBtn.MouseButton1Click:Connect(function()
     Features.AutoAttack = not Features.AutoAttack
     updateStateUI(AutoAttackBtn, AutoAttackStroke, AutoAttackGrad, Features.AutoAttack, "⚔️ Fast Spam Clicker: ON", "⚔️ Fast Spam Clicker: OFF")
-    if Features.AutoAttack then Connections.Attack = RunService.RenderStepped:Connect(executeSpamClick)
-    elseif Connections.Attack then Connections.Attack:Disconnect() Connections.Attack = nil end
+    if Connections.Attack then Connections.Attack:Disconnect() Connections.Attack = nil end
+    if Features.AutoAttack then Connections.Attack = RunService.RenderStepped:Connect(executeSpamClick) end
 end)
 
 AIBattleBtn.MouseButton1Click:Connect(function()
     Features.AIBattle = not Features.AIBattle
     updateStateUI(AIBattleBtn, AIBattleStroke, AIBattleGrad, Features.AIBattle, "🤖 AI BATTLE (The_Rake): ON", "🤖 AI BATTLE (The_Rake): OFF")
+    if Connections.AIBattle then Connections.AIBattle:Disconnect() Connections.AIBattle = nil end
+    if Connections.Noclip then Connections.Noclip:Disconnect() Connections.Noclip = nil end
     if Features.AIBattle then
         Connections.Noclip = RunService.Stepped:Connect(function()
             if LocalPlayer.Character then for _, p in ipairs(LocalPlayer.Character:GetChildren()) do if p:IsA("BasePart") then p.CanCollide = false end end end
@@ -679,39 +723,39 @@ AIBattleBtn.MouseButton1Click:Connect(function()
                 executeSpamClick()
             end
         end)
-    else
-        if Connections.AIBattle then Connections.AIBattle:Disconnect() Connections.AIBattle = nil end
-        if Connections.Noclip then Connections.Noclip:Disconnect() Connections.Noclip = nil end
     end
 end)
 
 BringBossBtn.MouseButton1Click:Connect(function()
     Features.BringBoss = not Features.BringBoss
     updateStateUI(BringBossBtn, BringBossStroke, BringBossGrad, Features.BringBoss, "🧲 Bring Boss: ON", "🧲 Bring Boss To Player: OFF")
+    if Connections.BringBoss then Connections.BringBoss:Disconnect() Connections.BringBoss = nil end
     if Features.BringBoss then
         Connections.BringBoss = RunService.Heartbeat:Connect(function()
             local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             local _, targetPart = findTargetModel(RAKE_NAME)
             if hrp and targetPart then targetPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -3) end
         end)
-    elseif Connections.BringBoss then Connections.BringBoss:Disconnect() Connections.BringBoss = nil end
+    end
 end)
 
 HitboxBtn.MouseButton1Click:Connect(function()
     Features.ExpandHitbox = not Features.ExpandHitbox
     updateStateUI(HitboxBtn, HitboxStroke, HitboxGrad, Features.ExpandHitbox, "📦 Expand Hitbox: ON", "📦 Expand Target Hitbox: OFF")
+    if Connections.Hitbox then Connections.Hitbox:Disconnect() Connections.Hitbox = nil end
     if Features.ExpandHitbox then
         Connections.Hitbox = RunService.Heartbeat:Connect(function()
             local _, rakePart = findTargetModel(RAKE_NAME) local _, doofPart = findTargetModel(TARGET_NAME)
             if rakePart then rakePart.Size = Vector3.new(20, 20, 20) rakePart.Transparency = 0.7 end
             if doofPart then doofPart.Size = Vector3.new(20, 20, 20) doofPart.Transparency = 0.7 end
         end)
-    elseif Connections.Hitbox then Connections.Hitbox:Disconnect() Connections.Hitbox = nil end
+    end
 end)
 
 TriggerBotBtn.MouseButton1Click:Connect(function()
     Features.TriggerBot = not Features.TriggerBot
     updateStateUI(TriggerBotBtn, TriggerBotStroke, TriggerBotGrad, Features.TriggerBot, "🎯 Trigger Bot: ON", "🎯 Trigger Bot: OFF")
+    if Connections.TriggerBot then Connections.TriggerBot:Disconnect() Connections.TriggerBot = nil end
     if Features.TriggerBot then
         Connections.TriggerBot = RunService.Heartbeat:Connect(function()
             local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -720,7 +764,7 @@ TriggerBotBtn.MouseButton1Click:Connect(function()
                 if bossRoot and (hrp.Position - bossRoot.Position).Magnitude <= 25 then executeSpamClick() end
             end
         end)
-    elseif Connections.TriggerBot then Connections.TriggerBot:Disconnect() Connections.TriggerBot = nil end
+    end
 end)
 
 ForceDropBtn.MouseButton1Click:Connect(function()
@@ -728,6 +772,7 @@ ForceDropBtn.MouseButton1Click:Connect(function()
     updateStateUI(ForceDropBtn, ForceDropStroke, ForceDropGrad, Features.ForceDrop, "💥 FORCE DROP 1000%: ON", "💥 FORCE DROP 1000%: OFF")
     if Features.ForceDrop then
         updateRemoteCache()
+        if Tasks.ForceDrop then pcall(task.cancel, Tasks.ForceDrop) end
         Tasks.ForceDrop = task.spawn(function()
             while Features.ForceDrop do
                 for _, remote in ipairs(cachedRemotes.GiftRain) do pcall(function() remote:FireServer(1000) end) end
@@ -745,6 +790,7 @@ local function setupLuckToggle(btn, stroke, grad, featureKey, multiplier, textOn
         Features[featureKey] = not Features[featureKey]
         updateStateUI(btn, stroke, grad, Features[featureKey], textOn, textOff)
         if Features[featureKey] then
+            if Tasks[featureKey] then pcall(task.cancel, Tasks[featureKey]) end
             Tasks[featureKey] = task.spawn(function() while Features[featureKey] do triggerGiftRainAndLoot(multiplier) task.wait(0.35) end end)
         elseif Tasks[featureKey] then pcall(task.cancel, Tasks[featureKey]) Tasks[featureKey] = nil end
     end)
@@ -758,24 +804,30 @@ setupLuckToggle(Luck1000Btn, Luck1000Stroke, Luck1000Grad, "Luck1000", 10.0, "�
 AutoEscapeBtn.MouseButton1Click:Connect(function()
     Features.AutoEscape = not Features.AutoEscape
     updateStateUI(AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad, Features.AutoEscape, "🚨 Auto Escape: ON", "🚨 Auto Escape (20% HP): OFF")
+    if Connections.Escape then Connections.Escape:Disconnect() Connections.Escape = nil end
     if Features.AutoEscape then
         Connections.Escape = RunService.Heartbeat:Connect(function()
             local char = LocalPlayer.Character local hum = char and char:FindFirstChildOfClass("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp and (hum.Health / hum.MaxHealth) <= 0.2 then hrp.CFrame = hrp.CFrame * CFrame.new(0, 150, 0) end
+            if hum and hrp and (hum.Health / hum.MaxHealth) <= 0.2 and not escapeDebounce then
+                escapeDebounce = true
+                hrp.CFrame = hrp.CFrame * CFrame.new(0, 150, 0)
+                task.delay(3, function() escapeDebounce = false end)
+            end
         end)
-    elseif Connections.Escape then Connections.Escape:Disconnect() Connections.Escape = nil end
+    end
 end)
 
 BringRakoofBtn.MouseButton1Click:Connect(function()
     Features.BringRakoof = not Features.BringRakoof
     updateStateUI(BringRakoofBtn, BringRakoofStroke, BringRakoofGrad, Features.BringRakoof, "🧲 Bring Rakoof: ON", "🧲 Bring Rakoof: OFF")
+    if Connections.BringRakoof then Connections.BringRakoof:Disconnect() Connections.BringRakoof = nil end
     if Features.BringRakoof then
         Connections.BringRakoof = RunService.Heartbeat:Connect(function()
             local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             local _, targetPart = findTargetModel(TARGET_NAME)
             if hrp and targetPart then targetPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -3) end
         end)
-    elseif Connections.BringRakoof then Connections.BringRakoof:Disconnect() Connections.BringRakoof = nil end
+    end
 end)
 
 StaminaBtn.MouseButton1Click:Connect(function()
@@ -823,7 +875,7 @@ DebugPickupBtn.MouseButton1Click:Connect(function()
     local pulledCount = 0
     for _, container in ipairs(getDropContainers()) do
         for _, obj in ipairs(container:GetChildren()) do
-            if not Features.UseWhitelist or TARGET_ITEMS_LOOKUP[obj.Name:lower()] then
+            if not Features.UseWhitelist or isWhitelistedItem(obj.Name) then
                 local handle = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
                 if handle then
                     pulledCount = pulledCount + 1
@@ -836,7 +888,7 @@ DebugPickupBtn.MouseButton1Click:Connect(function()
     task.delay(2.5, function() DebugPickupBtn.Text = "🐛 DEBUG AUTO PICKUP" end)
 end)
 
-UserInputService.InputBegan:Connect(function(input, gpe)
+Connections.ToggleKey = UserInputService.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == TOGGLE_KEY and MainFrame then
         MainFrame.Visible = not MainFrame.Visible RadarFrame.Visible = MainFrame.Visible SpeedFrame.Visible = MainFrame.Visible
     end
