@@ -1,4 +1,4 @@
--- Shark Hub V4.6 | Ultimate Edition (Speed Charger + No Regen)
+-- SharkHub V4.7 | Speed Charger (Fixed Visibility + Turn Off Button)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -65,6 +65,11 @@ local GREEN_ON_GRADIENT = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 235, 110)),
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 170)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 160, 80))
+})
+local RED_OFF_GRADIENT = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 40, 40)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 60, 60)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 30, 30))
 })
 local SPECIAL_ORANGE_OFF = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(240, 130, 20)),
@@ -200,6 +205,7 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SharkHubStaffGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 100
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
 -- Toggle Icon
@@ -245,7 +251,6 @@ local MainStroke = Instance.new("UIStroke", MainFrame) MainStroke.Thickness = 2 
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 52)
 TitleBar.BackgroundColor3 = Color3.fromRGB(22, 62, 38)
-TitleBar.ZIndex = 11
 TitleBar.Parent = MainFrame
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 16)
 
@@ -265,7 +270,7 @@ Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
 local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Size = UDim2.new(1, -24, 1, -68) ScrollingFrame.Position = UDim2.new(0, 12, 0, 58)
 ScrollingFrame.BackgroundTransparency = 1 ScrollingFrame.ScrollBarThickness = 5 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
-ScrollingFrame.ZIndex = 11 ScrollingFrame.Parent = MainFrame
+ScrollingFrame.Parent = MainFrame
 
 MinimizeBtn.MouseButton1Click:Connect(function()
     ScrollingFrame.Visible = not ScrollingFrame.Visible
@@ -282,7 +287,7 @@ UIGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() 
 local function CreateStaffButton(text, order, initialActive)
     local btn = Instance.new("TextButton")
     btn.BackgroundColor3 = Color3.fromRGB(22, 62, 38) btn.Text = text btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.LayoutOrder = order btn.ZIndex = 12 btn.Parent = ScrollingFrame
+    btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.LayoutOrder = order btn.Parent = ScrollingFrame
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
     local grad = Instance.new("UIGradient") grad.Color = initialActive and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT grad.Rotation = 90 grad.Parent = btn
     local stroke = Instance.new("UIStroke", btn) stroke.Thickness = 1.5 stroke.Color = initialActive and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
@@ -296,7 +301,7 @@ local function updateStateUI(btn, stroke, grad, state, textOn, textOff)
 end
 
 --------------------------------------------------------------------------------
--- DEDICATED SPEED CHARGER GUI (SEPARATE FLOATING WINDOW)
+-- DEDICATED SPEED CHARGER GUI (FIXED VISIBILITY & TURN OFF BUTTON)
 --------------------------------------------------------------------------------
 if PlayerGui:FindFirstChild("SharkHubSpeedGui") then PlayerGui.SharkHubSpeedGui:Destroy() end
 
@@ -304,13 +309,13 @@ local SpeedGui = Instance.new("ScreenGui")
 SpeedGui.Name = "SharkHubSpeedGui"
 SpeedGui.ResetOnSpawn = false
 SpeedGui.DisplayOrder = 105
+SpeedGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 SpeedGui.Parent = PlayerGui
 
 local SpeedFrame = Instance.new("Frame")
-SpeedFrame.Size = UDim2.new(0, 240, 0, 135)
+SpeedFrame.Size = UDim2.new(0, 250, 0, 175)
 SpeedFrame.Position = UDim2.new(0.02, 0, 0.35, 0)
 SpeedFrame.BackgroundColor3 = Color3.fromRGB(18, 52, 32)
-SpeedFrame.ZIndex = 100
 SpeedFrame.Parent = SpeedGui
 Instance.new("UICorner", SpeedFrame).CornerRadius = UDim.new(0, 12)
 local SpeedFrameStroke = Instance.new("UIStroke", SpeedFrame)
@@ -341,12 +346,12 @@ SpeedTitleBar.BackgroundTransparency = 1
 SpeedTitleBar.Text = "⚡ SPEED CHARGER V1"
 SpeedTitleBar.TextColor3 = Color3.fromRGB(0, 255, 170)
 SpeedTitleBar.Font = Enum.Font.GothamBold
-SpeedTitleBar.TextSize = 12
+SpeedTitleBar.TextSize = 13
 SpeedTitleBar.Parent = SpeedFrame
 
 local SpeedInput = Instance.new("TextBox")
-SpeedInput.Size = UDim2.new(0.85, 0, 0, 34)
-SpeedInput.Position = UDim2.new(0.075, 0, 0.30, 0)
+SpeedInput.Size = UDim2.new(0.88, 0, 0, 32)
+SpeedInput.Position = UDim2.new(0.06, 0, 0.22, 0)
 SpeedInput.BackgroundColor3 = Color3.fromRGB(12, 36, 22)
 SpeedInput.Text = "50"
 SpeedInput.PlaceholderText = "Type Speed Amount..."
@@ -360,8 +365,8 @@ SpeedInputStroke.Thickness = 1
 SpeedInputStroke.Color = Color3.fromRGB(0, 255, 150)
 
 local ApplySpeedBtn = Instance.new("TextButton")
-ApplySpeedBtn.Size = UDim2.new(0.85, 0, 0, 32)
-ApplySpeedBtn.Position = UDim2.new(0.075, 0, 0.65, 0)
+ApplySpeedBtn.Size = UDim2.new(0.88, 0, 0, 32)
+ApplySpeedBtn.Position = UDim2.new(0.06, 0, 0.46, 0)
 ApplySpeedBtn.BackgroundColor3 = Color3.fromRGB(22, 62, 38)
 ApplySpeedBtn.Text = "⚡ APPLY SPEED"
 ApplySpeedBtn.TextColor3 = Color3.fromRGB(0, 255, 170)
@@ -373,6 +378,22 @@ local ApplySpeedGrad = Instance.new("UIGradient")
 ApplySpeedGrad.Color = GREEN_ON_GRADIENT
 ApplySpeedGrad.Rotation = 90
 ApplySpeedGrad.Parent = ApplySpeedBtn
+
+-- NEW TURN OFF / RESET BUTTON
+local OffSpeedBtn = Instance.new("TextButton")
+OffSpeedBtn.Size = UDim2.new(0.88, 0, 0, 32)
+OffSpeedBtn.Position = UDim2.new(0.06, 0, 0.70, 0)
+OffSpeedBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
+OffSpeedBtn.Text = "🛑 TURN OFF (RESET SPEED)"
+OffSpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OffSpeedBtn.Font = Enum.Font.GothamBold
+OffSpeedBtn.TextSize = 11
+OffSpeedBtn.Parent = SpeedFrame
+Instance.new("UICorner", OffSpeedBtn).CornerRadius = UDim.new(0, 8)
+local OffSpeedGrad = Instance.new("UIGradient")
+OffSpeedGrad.Color = RED_OFF_GRADIENT
+OffSpeedGrad.Rotation = 90
+OffSpeedGrad.Parent = OffSpeedBtn
 
 ApplySpeedBtn.MouseButton1Click:Connect(function()
     local val = tonumber(SpeedInput.Text)
@@ -386,6 +407,14 @@ ApplySpeedBtn.MouseButton1Click:Connect(function()
         ApplySpeedBtn.Text = "⚠️ INVALID NUMBER"
         task.delay(1.5, function() ApplySpeedBtn.Text = "⚡ APPLY SPEED" end)
     end
+end)
+
+OffSpeedBtn.MouseButton1Click:Connect(function()
+    currentSetSpeed = nil
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum.WalkSpeed = 16 end
+    OffSpeedBtn.Text = "🔴 SPEED OFF (RESET TO 16)"
+    task.delay(1.5, function() OffSpeedBtn.Text = "🛑 TURN OFF (RESET SPEED)" end)
 end)
 
 -- Continuous walkspeed locker loop
@@ -403,7 +432,7 @@ end)
 --------------------------------------------------------------------------------
 local RadarFrame = Instance.new("Frame")
 RadarFrame.Size = UDim2.new(0, 280, 0, 110) RadarFrame.Position = UDim2.new(0.5, 385, 0.5, -55)
-RadarFrame.BackgroundColor3 = Color3.fromRGB(18, 52, 32) RadarFrame.ZIndex = 50 RadarFrame.Parent = ScreenGui
+RadarFrame.BackgroundColor3 = Color3.fromRGB(18, 52, 32) RadarFrame.Parent = ScreenGui
 Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0, 12)
 local RadarStroke = Instance.new("UIStroke", RadarFrame) RadarStroke.Thickness = 2 RadarStroke.Color = Color3.fromRGB(0, 255, 150)
 
@@ -473,7 +502,7 @@ local TradeDropdownBtn, _, _ = CreateStaffButton("📜 SELECT TRADE ITEM ▼", 6
 -- Trade Dropdown Menu Frame
 local DropdownListFrame = Instance.new("ScrollingFrame")
 DropdownListFrame.Size = UDim2.new(0.485, 0, 0, 90) DropdownListFrame.Position = UDim2.new(0.515, 0, 0, 110)
-DropdownListFrame.BackgroundColor3 = Color3.fromRGB(15, 35, 24) DropdownListFrame.ZIndex = 150 DropdownListFrame.Visible = false DropdownListFrame.Parent = MainFrame
+DropdownListFrame.BackgroundColor3 = Color3.fromRGB(15, 35, 24) DropdownListFrame.Visible = false DropdownListFrame.Parent = MainFrame
 Instance.new("UICorner", DropdownListFrame).CornerRadius = UDim.new(0, 8)
 local DropListLayout = Instance.new("UIListLayout") DropListLayout.Parent = DropdownListFrame
 
@@ -618,13 +647,13 @@ AutoTradeToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 -- Standard Core Logic Bindings
-ToggleIcon.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible RadarFrame.Visible = MainFrame.Visible end)
+ToggleIcon.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible RadarFrame.Visible = MainFrame.Visible SpeedFrame.Visible = MainFrame.Visible end)
 ToggleRadarBtn.MouseButton1Click:Connect(function()
     RadarFrame.Visible = not RadarFrame.Visible
     updateStateUI(ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad, RadarFrame.Visible, "🔮 TOGGLE DROP RADAR GUI: ON", "🔮 TOGGLE DROP RADAR GUI: OFF")
 end)
 
--- AUTO PICKUP (RUNSERVICE HEARTBEAT / FRAME-EXACT ~0.001s)
+-- AUTO PICKUP
 AutoPickupBtn.MouseButton1Click:Connect(function()
     Features.AutoPickup = not Features.AutoPickup
     updateStateUI(AutoPickupBtn, AutoPickupStroke, AutoPickupGrad, Features.AutoPickup, "🎁 Golden Staff Auto Pickup: ON", "🎁 Golden Staff Auto Pickup: OFF")
