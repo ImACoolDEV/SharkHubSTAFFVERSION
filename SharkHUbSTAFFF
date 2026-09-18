@@ -108,28 +108,53 @@ local function updateRemoteCache()
 end
 updateRemoteCache()
 
+-- OVERRIDDEN FAST REGEN SYSTEM
+local FastRegenConnection = nil
+
 local function applyRegenBoost()
+    -- 1. Update StarterPlayer template if accessible
     local starterScripts = StarterPlayer:FindFirstChild("StarterCharacterScripts")
     if starterScripts then
         local healthScript = starterScripts:FindFirstChild("Health")
         if healthScript then
-            local regenValue = healthScript:FindFirstChild("Regen")
+            local regenValue = healthScript:FindFirstChild("RegenRate") or healthScript:FindFirstChild("Regen")
             if regenValue and regenValue:IsA("ValueBase") then
                 regenValue.Value = 100
             end
         end
     end
 
-    if LocalPlayer.Character then
-        local charHealth = LocalPlayer.Character:FindFirstChild("Health")
-        if charHealth then
-            local regenValue = charHealth:FindFirstChild("Regen")
+    -- 2. Destroy slow default script in active Character and hook ultra-fast loop
+    local char = LocalPlayer.Character
+    if char then
+        local oldHealth = char:FindFirstChild("Health")
+        if oldHealth then
+            local regenValue = oldHealth:FindFirstChild("RegenRate") or oldHealth:FindFirstChild("Regen")
             if regenValue and regenValue:IsA("ValueBase") then
                 regenValue.Value = 100
             end
+            pcall(function()
+                if oldHealth:IsA("BaseScript") then oldHealth.Disabled = true end
+                oldHealth:Destroy()
+            end)
         end
+
+        -- Smooth frame-by-frame rapid heal loop
+        if Connections.FastRegen then Connections.FastRegen:Disconnect() end
+        Connections.FastRegen = RunService.Heartbeat:Connect(function()
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 and hum.Health < hum.MaxHealth then
+                hum.Health = math.min(hum.Health + 10, hum.MaxHealth)
+            end
+        end)
     end
 end
+
+-- Auto-apply fast regen whenever character respawns
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    applyRegenBoost()
+end)
 
 local function findTargetModel(query)
     local qLower = query:lower()
@@ -380,9 +405,8 @@ end)
 -- COMPLETE BUTTON MATRIX
 --------------------------------------------------------------------------------
 
--- V3.70 SPECIAL RECREATED BUTTONS
 local BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad = CreateStaffButton("🔥 BRO MAX LUCK 100000000%: OFF", 1, false)
-local FixRegenBtn, FixRegenStroke, FixRegenGrad = CreateStaffButton("❤️ SET REGEN TO 100", 2, false)
+local FixRegenBtn, FixRegenStroke, FixRegenGrad = CreateStaffButton("❤️ SET REGEN TO 100 (FAST HEAL)", 2, false)
 local SlashLoopBtn, SlashLoopStroke, SlashLoopGrad = CreateStaffButton("⚡ EXECUTE SLASH 10X LOOP", 3, false)
 local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 4, false)
 AutoDisableConeGrad.Color = SPECIAL_ORANGE_OFF AutoDisableConeStroke.Color = Color3.fromRGB(255, 170, 0)
@@ -439,11 +463,10 @@ local DebugPickupBtn, _, _ = CreateStaffButton("🐛 DEBUG AUTO PICKUP", 28, fal
 -- FEATURE LOGIC BINDINGS
 --------------------------------------------------------------------------------
 
--- NEW DEDICATED BUTTON BINDINGS
 FixRegenBtn.MouseButton1Click:Connect(function()
     applyRegenBoost()
-    FixRegenBtn.Text = "✅ REGEN SET TO 100!"
-    task.delay(2, function() FixRegenBtn.Text = "❤️ SET REGEN TO 100" end)
+    FixRegenBtn.Text = "⚡ ULTRA-FAST HEAL ACTIVE!"
+    task.delay(2, function() FixRegenBtn.Text = "❤️ SET REGEN TO 100 (FAST HEAL)" end)
 end)
 
 SlashLoopBtn.MouseButton1Click:Connect(function()
@@ -468,7 +491,7 @@ BroMaxLuckBtn.MouseButton1Click:Connect(function()
     elseif Tasks.BroMaxLuck then task.cancel(Tasks.BroMaxLuck) Tasks.BroMaxLuck = nil end
 end)
 
--- AUTO SURVIVE ASHBOUND (BURNED BONE)
+-- AUTO SURVIVE ASHBOUND
 AutoSurviveBtn.MouseButton1Click:Connect(function()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
