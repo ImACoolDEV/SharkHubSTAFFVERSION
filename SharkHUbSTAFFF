@@ -7,6 +7,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local StarterPlayer = game:GetService("StarterPlayer")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -18,7 +19,7 @@ local TARGET_ITEMS_LIST = {
     "GoldenApple", "LegendaryEnergy", "IgnitionFlame", 
     "SnowFlakes", "CorruptedHalo", "StrangeBar", "BurnedBone",
     "Penguin", "PenguinPart", "PenguinParts", "Mesh", "Meshes",
-    "CrucibleSword", "Imposta", "NullBlock", "TrainerCap"
+    "CrucibleSword", "Imposta", "NullBlock", "TrainerCap", "SlashProjectile2"
 }
 
 local TARGET_ITEMS_LOOKUP = {}
@@ -89,20 +90,99 @@ local FIRE_MAX_LUCK_GRADIENT = ColorSequence.new({
 --------------------------------------------------------------------------------
 -- CORE HELPERS & REMOTE CONTROLLER
 --------------------------------------------------------------------------------
-local cachedRemotes = { GiftRain = {}, LootItem = {} }
+local cachedRemotes = { GiftRain = {}, LootItem = {}, SpawnItem = {} }
+
 local function updateRemoteCache()
     table.clear(cachedRemotes.GiftRain)
     table.clear(cachedRemotes.LootItem)
+    table.clear(cachedRemotes.SpawnItem)
     local search = ReplicatedStorage:FindFirstChild("Remotes") or ReplicatedStorage
     for _, obj in ipairs(search:GetDescendants()) do
         if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") or obj:IsA("BindableEvent") then
             local n = obj.Name:lower()
             if n:find("giftrain") then table.insert(cachedRemotes.GiftRain, obj)
-            elseif n:find("lootitem") and not n:find("player") then table.insert(cachedRemotes.LootItem, obj) end
+            elseif n:find("lootitem") and not n:find("player") then table.insert(cachedRemotes.LootItem, obj)
+            elseif n:find("spawnitem") then table.insert(cachedRemotes.SpawnItem, obj) end
         end
     end
 end
 updateRemoteCache()
+
+local function applyRegenBoost()
+    local starterScripts = StarterPlayer:FindFirstChild("StarterCharacterScripts")
+    if starterScripts then
+        local healthScript = starterScripts:FindFirstChild("Health")
+        if healthScript then
+            local regenValue = healthScript:FindFirstChild("Regen")
+            if regenValue and regenValue:IsA("ValueBase") then
+                regenValue.Value = 100
+            end
+        end
+    end
+
+    if LocalPlayer.Character then
+        local charHealth = LocalPlayer.Character:FindFirstChild("Health")
+        if charHealth then
+            local regenValue = charHealth:FindFirstChild("Regen")
+            if regenValue and regenValue:IsA("ValueBase") then
+                regenValue.Value = 100
+            end
+        end
+    end
+end
+
+local function findTargetModel(query)
+    local qLower = query:lower()
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") and obj.Name:lower():find(qLower) then
+            local p = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj:FindFirstChildWhichIsA("BasePart")
+            if p then return obj, p end
+        end
+    end
+    return nil, nil
+end
+
+local function runBroMaxLuckCycle()
+    applyRegenBoost()
+    if #cachedRemotes.GiftRain == 0 and #cachedRemotes.LootItem == 0 and #cachedRemotes.SpawnItem == 0 then updateRemoteCache() end
+
+    for iteration = 1, 10 do
+        -- 1. Fire SpawnItem Remotes
+        for _, obj in ipairs(cachedRemotes.SpawnItem) do
+            pcall(function()
+                if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2") else obj:FireServer("SlashProjectile2") end
+            end)
+        end
+        -- 2. Fire GiftRain Remotes
+        for _, obj in ipairs(cachedRemotes.GiftRain) do
+            pcall(function()
+                if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2", 100000000) else obj:FireServer("SlashProjectile2", 100000000) end
+            end)
+        end
+        -- 3. Fire LootItem Remotes
+        for _, obj in ipairs(cachedRemotes.LootItem) do
+            pcall(function()
+                if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2") else obj:FireServer("SlashProjectile2") end
+            end)
+        end
+
+        -- 4. Teleport SlashProjectile2 objects to The_Rake
+        local _, rakePart = findTargetModel(RAKE_NAME)
+        if rakePart then
+            local rakeCFrame = rakePart.CFrame
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj.Name == "SlashProjectile2" then
+                    if obj:IsA("Model") then
+                        obj:PivotTo(rakeCFrame)
+                    elseif obj:IsA("BasePart") then
+                        obj.CFrame = rakeCFrame
+                    end
+                end
+            end
+        end
+        task.wait(0.15)
+    end
+end
 
 local function triggerGiftRainAndLoot(multiplier)
     if #cachedRemotes.GiftRain == 0 and #cachedRemotes.LootItem == 0 then updateRemoteCache() end
@@ -134,17 +214,6 @@ local function playerHasItem(itemName)
     if char and char:FindFirstChild(itemName) then return true end
     if backpack and backpack:FindFirstChild(itemName) then return true end
     return false
-end
-
-local function findTargetModel(query)
-    local qLower = query:lower()
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        if obj:IsA("Model") and obj.Name:lower():find(qLower) then
-            local p = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj:FindFirstChildWhichIsA("BasePart")
-            if p then return obj, p end
-        end
-    end
-    return nil, nil
 end
 
 local function executeSpamClick()
@@ -382,7 +451,12 @@ BroMaxLuckBtn.MouseButton1Click:Connect(function()
     BroMaxLuckGrad.Color = Features.BroMaxLuck and FIRE_MAX_LUCK_GRADIENT or GREEN_OFF_GRADIENT
     BroMaxLuckStroke.Color = Features.BroMaxLuck and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(40, 130, 80)
     if Features.BroMaxLuck then
-        Tasks.BroMaxLuck = task.spawn(function() while Features.BroMaxLuck do triggerGiftRainAndLoot(100000000) task.wait(0.15) end end)
+        Tasks.BroMaxLuck = task.spawn(function()
+            while Features.BroMaxLuck do
+                runBroMaxLuckCycle()
+                task.wait(0.2)
+            end
+        end)
     elseif Tasks.BroMaxLuck then task.cancel(Tasks.BroMaxLuck) Tasks.BroMaxLuck = nil end
 end)
 
