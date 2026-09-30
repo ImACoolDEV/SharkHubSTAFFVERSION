@@ -13,11 +13,43 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 
-local VirtualInputManager = pcall(function() return game:GetService("VirtualInputManager") end) and game:GetService("VirtualInputManager") or nil
 local VirtualUser = pcall(function() return game:GetService("VirtualUser") end) and game:GetService("VirtualUser") or nil
-
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+--------------------------------------------------------------------------------
+-- UNIVERSAL DRAGGABLE HELPER
+--------------------------------------------------------------------------------
+local function makeDraggable(guiFrame, dragHandle)
+    dragHandle = dragHandle or guiFrame
+    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
+    
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    dragHandle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            guiFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
 
 --------------------------------------------------------------------------------
 -- TARGET LISTS & CONFIG
@@ -32,11 +64,6 @@ local TARGET_ITEMS_LIST = {
 local TARGET_ITEMS_LOOKUP = {}
 for _, item in ipairs(TARGET_ITEMS_LIST) do TARGET_ITEMS_LOOKUP[item:lower()] = true end
 
-local TRADE_RECIPES = {
-    ["SoulSurvivor"] = {"NullBlock", "CorruptedHalo"},
-    ["TrafficCone"] = {"SoulSurvivor", "GoldenApple", "Imposta", "TrainerCap", "StrangeBar"}
-}
-
 local ITEM_PROBABILITIES = {
     ["cruciblesword"] = "3%", ["corruptedhalo"] = "5%", ["ignitionflame"] = "8%",
     ["legendaryenergy"] = "10%", ["goldenapple"] = "15%", ["strangebar"] = "20%",
@@ -47,7 +74,6 @@ local RAKE_NAME = "the_rake"
 local TARGET_NAME = "doofmmy"
 local TOGGLE_KEY = Enum.KeyCode.RightControl
 
--- Feature Matrix
 local Features = {
     BroMaxLuck = false, AutoDisableCone = false, AutoTrade = false,
     AIBattle = false, AutoAttack = false, BringBoss = false, ExpandHitbox = false,
@@ -57,13 +83,9 @@ local Features = {
     Fly = false, InfJump = false, FullBright = false, TorsoVFX = false
 }
 
-local SELECTED_TRADE_ITEM = "SoulSurvivor"
-local visitedCones = {}
 local Connections, Tasks = {}, {}
 local currentSetSpeed = nil
-local escapeDebounce = false
 
--- Backup Original Lighting Settings
 local OrigLighting = {
     Ambient = Lighting.Ambient,
     OutdoorAmbient = Lighting.OutdoorAmbient,
@@ -72,7 +94,6 @@ local OrigLighting = {
     GlobalShadows = Lighting.GlobalShadows
 }
 
--- Cleanup registration
 getgenv().SharkHubCleanup = function()
     for _, conn in pairs(Connections) do if conn then conn:Disconnect() end end
     for _, taskRef in pairs(Tasks) do if taskRef then pcall(task.cancel, taskRef) end end
@@ -91,7 +112,7 @@ getgenv().SharkHubCleanup = function()
 end
 
 --------------------------------------------------------------------------------
--- HALLOWEEN THEME GRADIENTS & COLORS
+-- HALLOWEEN THEME GRADIENTS
 --------------------------------------------------------------------------------
 local ORANGE_OFF_GRADIENT = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 25, 5)),
@@ -105,7 +126,7 @@ local ORANGE_ON_GRADIENT = ColorSequence.new({
 })
 
 --------------------------------------------------------------------------------
--- SAFE EXPLOIT HELPERS
+-- EXPLOIT HELPERS
 --------------------------------------------------------------------------------
 local function safeTouchInterest(part1, part2)
     if typeof(firetouchinterest) == "function" then
@@ -174,6 +195,11 @@ local function getDropContainers()
     return containers
 end
 
+local function safeBindClick(button, callback)
+    button.MouseButton1Click:Connect(callback)
+    button.Activated:Connect(callback)
+end
+
 --------------------------------------------------------------------------------
 -- MAIN HALLOWEEN GUI
 --------------------------------------------------------------------------------
@@ -192,36 +218,21 @@ ToggleIcon.BackgroundColor3 = Color3.fromRGB(35, 12, 45)
 ToggleIcon.Text = "🎃"
 ToggleIcon.TextSize = 30
 ToggleIcon.ZIndex = 200
+ToggleIcon.Active = true
 ToggleIcon.Parent = ScreenGui
 Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(0, 16)
 local IconStroke = Instance.new("UIStroke", ToggleIcon) IconStroke.Thickness = 2 IconStroke.Color = Color3.fromRGB(255, 120, 0)
 
-local iconDragging, iconDragInput, iconDragStart, iconStartPos, hasDragged = false, nil, nil, nil, false
-ToggleIcon.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        iconDragging = true iconDragStart = input.Position iconStartPos = ToggleIcon.Position hasDragged = false
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then iconDragging = false end
-        end)
-    end
-end)
-ToggleIcon.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then iconDragInput = input end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == iconDragInput and iconDragging then
-        local delta = input.Position - iconDragStart
-        if delta.Magnitude > 5 then hasDragged = true end
-        ToggleIcon.Position = UDim2.new(iconStartPos.X.Scale, iconStartPos.X.Offset + delta.X, iconStartPos.Y.Scale, iconStartPos.Y.Offset + delta.Y)
-    end
-end)
+makeDraggable(ToggleIcon)
 
--- Main Frame (Dark Spooky Purple / Void Black)
+-- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 760, 0, 500)
 MainFrame.Position = UDim2.new(0.5, -380, 0.5, -250)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
 MainFrame.ClipsDescendants = false
+MainFrame.Active = true
+MainFrame.ZIndex = 10
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
 local MainStroke = Instance.new("UIStroke", MainFrame) MainStroke.Thickness = 2.5 MainStroke.Color = Color3.fromRGB(255, 110, 0)
@@ -229,45 +240,49 @@ local MainStroke = Instance.new("UIStroke", MainFrame) MainStroke.Thickness = 2.
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 54)
 TitleBar.BackgroundColor3 = Color3.fromRGB(32, 14, 46)
+TitleBar.ZIndex = 11
+TitleBar.Active = true
 TitleBar.Parent = MainFrame
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 16)
+
+makeDraggable(MainFrame, TitleBar)
 
 local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(0.65, 0, 1, 0) TitleText.Position = UDim2.new(0, 18, 0, 0) TitleText.BackgroundTransparency = 1
 TitleText.Text = "🎃 SHARK HUB V5 — HALLOWEEN SPOOKY HUB 👻" TitleText.TextColor3 = Color3.fromRGB(255, 140, 0)
-TitleText.Font = Enum.Font.GothamBold TitleText.TextSize = 15 TitleText.TextXAlignment = Enum.TextXAlignment.Left TitleText.Parent = TitleBar
+TitleText.Font = Enum.Font.GothamBold TitleText.TextSize = 15 TitleText.TextXAlignment = Enum.TextXAlignment.Left TitleText.ZIndex = 12 TitleText.Parent = TitleBar
 
 local MinimizeBtn = Instance.new("TextButton") MinimizeBtn.Size = UDim2.new(0, 32, 0, 32) MinimizeBtn.Position = UDim2.new(1, -82, 0.5, -16)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) MinimizeBtn.Text = "-" MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) MinimizeBtn.Font = Enum.Font.GothamBold MinimizeBtn.Parent = TitleBar
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) MinimizeBtn.Text = "-" MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) MinimizeBtn.Font = Enum.Font.GothamBold MinimizeBtn.ZIndex = 13 MinimizeBtn.Active = true MinimizeBtn.Parent = TitleBar
 Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 8)
 
 local CloseBtn = Instance.new("TextButton") CloseBtn.Size = UDim2.new(0, 32, 0, 32) CloseBtn.Position = UDim2.new(1, -44, 0.5, -16)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40) CloseBtn.Text = "X" CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255) CloseBtn.Font = Enum.Font.GothamBold CloseBtn.Parent = TitleBar
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40) CloseBtn.Text = "X" CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255) CloseBtn.Font = Enum.Font.GothamBold CloseBtn.ZIndex = 13 CloseBtn.Active = true CloseBtn.Parent = TitleBar
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
 
 local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Size = UDim2.new(1, -24, 1, -70) ScrollingFrame.Position = UDim2.new(0, 12, 0, 60)
 ScrollingFrame.BackgroundTransparency = 1 ScrollingFrame.ScrollBarThickness = 6 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 120, 0)
-ScrollingFrame.Parent = MainFrame
+ScrollingFrame.ZIndex = 11 ScrollingFrame.Active = true ScrollingFrame.Selectable = true ScrollingFrame.Parent = MainFrame
 
-MinimizeBtn.MouseButton1Click:Connect(function()
+safeBindClick(MinimizeBtn, function()
     ScrollingFrame.Visible = not ScrollingFrame.Visible
     MainFrame.Size = ScrollingFrame.Visible and UDim2.new(0, 760, 0, 500) or UDim2.new(0, 760, 0, 54)
     MinimizeBtn.Text = ScrollingFrame.Visible and "-" or "+"
 end)
-CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
+safeBindClick(CloseBtn, function() MainFrame.Visible = false end)
 
 local UIGridLayout = Instance.new("UIGridLayout")
 UIGridLayout.CellSize = UDim2.new(0.485, 0, 0, 44) UIGridLayout.CellPadding = UDim2.new(0.03, 0, 0, 10)
 UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder UIGridLayout.Parent = ScrollingFrame
 UIGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIGridLayout.AbsoluteContentSize.Y + 20)
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIGridLayout.AbsoluteContentSize.Y + 40)
 end)
 
 local function CreateStaffButton(text, order, initialActive)
     local btn = Instance.new("TextButton")
     btn.BackgroundColor3 = Color3.fromRGB(35, 15, 48) btn.Text = text btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.LayoutOrder = order btn.Parent = ScrollingFrame
+    btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.LayoutOrder = order btn.ZIndex = 12 btn.Active = true btn.Parent = ScrollingFrame
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
     local grad = Instance.new("UIGradient") grad.Color = initialActive and ORANGE_ON_GRADIENT or ORANGE_OFF_GRADIENT grad.Rotation = 90 grad.Parent = btn
     local stroke = Instance.new("UIStroke", btn) stroke.Thickness = 1.5 stroke.Color = initialActive and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(100, 45, 120)
@@ -293,49 +308,36 @@ local HealthFrame = Instance.new("Frame")
 HealthFrame.Size = UDim2.new(0, 260, 0, 85)
 HealthFrame.Position = UDim2.new(0.02, 0, 0.72, 0)
 HealthFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
+HealthFrame.Active = true
+HealthFrame.ZIndex = 20
 HealthFrame.Parent = HealthGui
 Instance.new("UICorner", HealthFrame).CornerRadius = UDim.new(0, 12)
 local HPFrameStroke = Instance.new("UIStroke", HealthFrame) HPFrameStroke.Thickness = 2 HPFrameStroke.Color = Color3.fromRGB(255, 110, 0)
 
-local hpDragging, hpDragInput, hpDragStart, hpStartPos = false, nil, nil, nil
-HealthFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        hpDragging = true hpDragStart = input.Position hpStartPos = HealthFrame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then hpDragging = false end end)
-    end
-end)
-HealthFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then hpDragInput = input end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == hpDragInput and hpDragging then
-        local delta = input.Position - hpDragStart
-        HealthFrame.Position = UDim2.new(hpStartPos.X.Scale, hpStartPos.X.Offset + delta.X, hpStartPos.Y.Scale, hpStartPos.Y.Offset + delta.Y)
-    end
-end)
+makeDraggable(HealthFrame)
 
-local HPHeader = Instance.new("Frame") HPHeader.Size = UDim2.new(1, 0, 0, 26) HPHeader.BackgroundTransparency = 1 HPHeader.Parent = HealthFrame
+local HPHeader = Instance.new("Frame") HPHeader.Size = UDim2.new(1, 0, 0, 26) HPHeader.BackgroundTransparency = 1 HPHeader.ZIndex = 21 HPHeader.Parent = HealthFrame
 local HPTitle = Instance.new("TextLabel") HPTitle.Size = UDim2.new(0.7, 0, 1, 0) HPTitle.Position = UDim2.new(0, 10, 0, 0) HPTitle.BackgroundTransparency = 1
-HPTitle.Text = "🎃 PLAYER HEALTH" HPTitle.TextColor3 = Color3.fromRGB(255, 140, 0) HPTitle.Font = Enum.Font.GothamBold HPTitle.TextSize = 12 HPTitle.TextXAlignment = Enum.TextXAlignment.Left HPTitle.Parent = HPHeader
+HPTitle.Text = "🎃 PLAYER HEALTH" HPTitle.TextColor3 = Color3.fromRGB(255, 140, 0) HPTitle.Font = Enum.Font.GothamBold HPTitle.TextSize = 12 HPTitle.TextXAlignment = Enum.TextXAlignment.Left HPTitle.ZIndex = 21 HPTitle.Parent = HPHeader
 
-local HPMinBtn = Instance.new("TextButton") HPMinBtn.Size = UDim2.new(0, 20, 0, 20) HPMinBtn.Position = UDim2.new(1, -48, 0, 3) HPMinBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 0) HPMinBtn.Text = "-" HPMinBtn.TextColor3 = Color3.new(1,1,1) HPMinBtn.Font = Enum.Font.GothamBold HPMinBtn.Parent = HPHeader Instance.new("UICorner", HPMinBtn).CornerRadius = UDim.new(0, 5)
-local HPCloseBtn = Instance.new("TextButton") HPCloseBtn.Size = UDim2.new(0, 20, 0, 20) HPCloseBtn.Position = UDim2.new(1, -24, 0, 3) HPCloseBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) HPCloseBtn.Text = "X" HPCloseBtn.TextColor3 = Color3.new(1,1,1) HPCloseBtn.Font = Enum.Font.GothamBold HPCloseBtn.Parent = HPHeader Instance.new("UICorner", HPCloseBtn).CornerRadius = UDim.new(0, 5)
+local HPMinBtn = Instance.new("TextButton") HPMinBtn.Size = UDim2.new(0, 20, 0, 20) HPMinBtn.Position = UDim2.new(1, -48, 0, 3) HPMinBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 0) HPMinBtn.Text = "-" HPMinBtn.TextColor3 = Color3.new(1,1,1) HPMinBtn.Font = Enum.Font.GothamBold HPMinBtn.ZIndex = 22 HPMinBtn.Active = true HPMinBtn.Parent = HPHeader Instance.new("UICorner", HPMinBtn).CornerRadius = UDim.new(0, 5)
+local HPCloseBtn = Instance.new("TextButton") HPCloseBtn.Size = UDim2.new(0, 20, 0, 20) HPCloseBtn.Position = UDim2.new(1, -24, 0, 3) HPCloseBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) HPCloseBtn.Text = "X" HPCloseBtn.TextColor3 = Color3.new(1,1,1) HPCloseBtn.Font = Enum.Font.GothamBold HPCloseBtn.ZIndex = 22 HPCloseBtn.Active = true HPCloseBtn.Parent = HPHeader Instance.new("UICorner", HPCloseBtn).CornerRadius = UDim.new(0, 5)
 
-local HPContainer = Instance.new("Frame") HPContainer.Size = UDim2.new(1, -20, 0, 42) HPContainer.Position = UDim2.new(0, 10, 0, 32) HPContainer.BackgroundTransparency = 1 HPContainer.Parent = HealthFrame
+local HPContainer = Instance.new("Frame") HPContainer.Size = UDim2.new(1, -20, 0, 42) HPContainer.Position = UDim2.new(0, 10, 0, 32) HPContainer.BackgroundTransparency = 1 HPContainer.ZIndex = 21 HPContainer.Parent = HealthFrame
 
-local HPBarBg = Instance.new("Frame") HPBarBg.Size = UDim2.new(1, 0, 0, 20) HPBarBg.Position = UDim2.new(0, 0, 0, 0) HPBarBg.BackgroundColor3 = Color3.fromRGB(40, 15, 50) HPBarBg.Parent = HPContainer Instance.new("UICorner", HPBarBg).CornerRadius = UDim.new(0, 6)
-local HPBarFill = Instance.new("Frame") HPBarFill.Size = UDim2.new(1, 0, 1, 0) HPBarFill.BackgroundColor3 = Color3.fromRGB(255, 110, 0) HPBarFill.Parent = HPBarBg Instance.new("UICorner", HPBarFill).CornerRadius = UDim.new(0, 6)
+local HPBarBg = Instance.new("Frame") HPBarBg.Size = UDim2.new(1, 0, 0, 20) HPBarBg.Position = UDim2.new(0, 0, 0, 0) HPBarBg.BackgroundColor3 = Color3.fromRGB(40, 15, 50) HPBarBg.ZIndex = 21 HPBarBg.Parent = HPContainer Instance.new("UICorner", HPBarBg).CornerRadius = UDim.new(0, 6)
+local HPBarFill = Instance.new("Frame") HPBarFill.Size = UDim2.new(1, 0, 1, 0) HPBarFill.BackgroundColor3 = Color3.fromRGB(255, 110, 0) HPBarFill.ZIndex = 22 HPBarFill.Parent = HPBarBg Instance.new("UICorner", HPBarFill).CornerRadius = UDim.new(0, 6)
 local HPFillGrad = Instance.new("UIGradient") HPFillGrad.Color = ORANGE_ON_GRADIENT HPFillGrad.Parent = HPBarFill
 
 local HPTextLabel = Instance.new("TextLabel") HPTextLabel.Size = UDim2.new(1, 0, 0, 18) HPTextLabel.Position = UDim2.new(0, 0, 0, 22) HPTextLabel.BackgroundTransparency = 1
-HPTextLabel.Text = "100 / 100 HP (100%)" HPTextLabel.TextColor3 = Color3.fromRGB(255, 200, 120) HPTextLabel.Font = Enum.Font.GothamBold HPTextLabel.TextSize = 11 HPTextLabel.Parent = HPContainer
+HPTextLabel.Text = "100 / 100 HP (100%)" HPTextLabel.TextColor3 = Color3.fromRGB(255, 200, 120) HPTextLabel.Font = Enum.Font.GothamBold HPTextLabel.TextSize = 11 HPTextLabel.ZIndex = 22 HPTextLabel.Parent = HPContainer
 
-HPMinBtn.MouseButton1Click:Connect(function()
+safeBindClick(HPMinBtn, function()
     HPContainer.Visible = not HPContainer.Visible
     HealthFrame.Size = HPContainer.Visible and UDim2.new(0, 260, 0, 85) or UDim2.new(0, 260, 0, 28)
     HPMinBtn.Text = HPContainer.Visible and "-" or "+"
 end)
-HPCloseBtn.MouseButton1Click:Connect(function() HealthFrame.Visible = false end)
+safeBindClick(HPCloseBtn, function() HealthFrame.Visible = false end)
 
 Connections.PlayerHPTracker = RunService.Heartbeat:Connect(function()
     if HealthFrame.Visible and HPContainer.Visible then
@@ -356,39 +358,64 @@ end)
 -- SPEED GUI & RADAR GUI
 --------------------------------------------------------------------------------
 local SpeedGui = Instance.new("ScreenGui") SpeedGui.Name = "SharkHubSpeedGui" SpeedGui.ResetOnSpawn = false SpeedGui.DisplayOrder = 105 SpeedGui.Parent = PlayerGui
-local SpeedFrame = Instance.new("Frame") SpeedFrame.Size = UDim2.new(0, 250, 0, 175) SpeedFrame.Position = UDim2.new(0.02, 0, 0.35, 0) SpeedFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) SpeedFrame.Parent = SpeedGui Instance.new("UICorner", SpeedFrame).CornerRadius = UDim.new(0, 12)
+local SpeedFrame = Instance.new("Frame") SpeedFrame.Size = UDim2.new(0, 250, 0, 175) SpeedFrame.Position = UDim2.new(0.02, 0, 0.35, 0) SpeedFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) SpeedFrame.Active = true SpeedFrame.ZIndex = 15 SpeedFrame.Parent = SpeedGui Instance.new("UICorner", SpeedFrame).CornerRadius = UDim.new(0, 12)
 local SpeedFrameStroke = Instance.new("UIStroke", SpeedFrame) SpeedFrameStroke.Thickness = 2 SpeedFrameStroke.Color = Color3.fromRGB(255, 110, 0)
 
-local SpeedTitleBar = Instance.new("TextLabel") SpeedTitleBar.Size = UDim2.new(1, 0, 0, 32) SpeedTitleBar.BackgroundTransparency = 1 SpeedTitleBar.Text = "⚡ SPEED CHARGER" SpeedTitleBar.TextColor3 = Color3.fromRGB(255, 140, 0) SpeedTitleBar.Font = Enum.Font.GothamBold SpeedTitleBar.TextSize = 13 SpeedTitleBar.Parent = SpeedFrame
-local SpeedInput = Instance.new("TextBox") SpeedInput.Size = UDim2.new(0.88, 0, 0, 32) SpeedInput.Position = UDim2.new(0.06, 0, 0.22, 0) SpeedInput.BackgroundColor3 = Color3.fromRGB(35, 15, 48) SpeedInput.Text = "50" SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255) SpeedInput.Font = Enum.Font.GothamBold SpeedInput.TextSize = 13 SpeedInput.Parent = SpeedFrame Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 8)
-local ApplySpeedBtn = Instance.new("TextButton") ApplySpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) ApplySpeedBtn.Position = UDim2.new(0.06, 0, 0.46, 0) ApplySpeedBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) ApplySpeedBtn.Text = "⚡ APPLY SPEED" ApplySpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) ApplySpeedBtn.Font = Enum.Font.GothamBold ApplySpeedBtn.Parent = SpeedFrame Instance.new("UICorner", ApplySpeedBtn).CornerRadius = UDim.new(0, 8)
-local OffSpeedBtn = Instance.new("TextButton") OffSpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) OffSpeedBtn.Position = UDim2.new(0.06, 0, 0.70, 0) OffSpeedBtn.BackgroundColor3 = Color3.fromRGB(100, 20, 20) OffSpeedBtn.Text = "🛑 RESET SPEED (16)" OffSpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) OffSpeedBtn.Font = Enum.Font.GothamBold OffSpeedBtn.Parent = SpeedFrame Instance.new("UICorner", OffSpeedBtn).CornerRadius = UDim.new(0, 8)
+makeDraggable(SpeedFrame)
 
-ApplySpeedBtn.MouseButton1Click:Connect(function()
+local SpeedTitleBar = Instance.new("TextLabel") SpeedTitleBar.Size = UDim2.new(1, 0, 0, 32) SpeedTitleBar.BackgroundTransparency = 1 SpeedTitleBar.Text = "⚡ SPEED CHARGER" SpeedTitleBar.TextColor3 = Color3.fromRGB(255, 140, 0) SpeedTitleBar.Font = Enum.Font.GothamBold SpeedTitleBar.TextSize = 13 SpeedTitleBar.ZIndex = 16 SpeedTitleBar.Parent = SpeedFrame
+local SpeedInput = Instance.new("TextBox") SpeedInput.Size = UDim2.new(0.88, 0, 0, 32) SpeedInput.Position = UDim2.new(0.06, 0, 0.22, 0) SpeedInput.BackgroundColor3 = Color3.fromRGB(35, 15, 48) SpeedInput.Text = "50" SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255) SpeedInput.Font = Enum.Font.GothamBold SpeedInput.TextSize = 13 SpeedInput.ZIndex = 16 SpeedInput.Active = true SpeedInput.Parent = SpeedFrame Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 8)
+local ApplySpeedBtn = Instance.new("TextButton") ApplySpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) ApplySpeedBtn.Position = UDim2.new(0.06, 0, 0.46, 0) ApplySpeedBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) ApplySpeedBtn.Text = "⚡ APPLY SPEED" ApplySpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) ApplySpeedBtn.Font = Enum.Font.GothamBold ApplySpeedBtn.ZIndex = 16 ApplySpeedBtn.Active = true ApplySpeedBtn.Parent = SpeedFrame Instance.new("UICorner", ApplySpeedBtn).CornerRadius = UDim.new(0, 8)
+local OffSpeedBtn = Instance.new("TextButton") OffSpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) OffSpeedBtn.Position = UDim2.new(0.06, 0, 0.70, 0) OffSpeedBtn.BackgroundColor3 = Color3.fromRGB(100, 20, 20) OffSpeedBtn.Text = "🛑 RESET SPEED (16)" OffSpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) OffSpeedBtn.Font = Enum.Font.GothamBold OffSpeedBtn.ZIndex = 16 OffSpeedBtn.Active = true OffSpeedBtn.Parent = SpeedFrame Instance.new("UICorner", OffSpeedBtn).CornerRadius = UDim.new(0, 8)
+
+safeBindClick(ApplySpeedBtn, function()
     local val = tonumber(SpeedInput.Text)
     if val then currentSetSpeed = val local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = val end ApplySpeedBtn.Text = "✅ SPEED SET: " .. val task.delay(1.5, function() ApplySpeedBtn.Text = "⚡ APPLY SPEED" end) end
 end)
-OffSpeedBtn.MouseButton1Click:Connect(function()
+safeBindClick(OffSpeedBtn, function()
     currentSetSpeed = nil local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = 16 end OffSpeedBtn.Text = "🔴 RESET TO 16" task.delay(1.5, function() OffSpeedBtn.Text = "🛑 RESET SPEED (16)" end)
 end)
 Connections.SpeedLock = RunService.Heartbeat:Connect(function()
     if currentSetSpeed then local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum and hum.WalkSpeed ~= currentSetSpeed then hum.WalkSpeed = currentSetSpeed end end
 end)
 
--- Radar & Rakoof HP Detector GUI
-local RadarFrame = Instance.new("Frame") RadarFrame.Size = UDim2.new(0, 280, 0, 160) RadarFrame.Position = UDim2.new(0.5, 390, 0.5, -80) RadarFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) RadarFrame.Parent = ScreenGui Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0, 12)
+--------------------------------------------------------------------------------
+-- RADAR & RAKOOF GRADIENT HP DETECTOR GUI
+--------------------------------------------------------------------------------
+local RadarFrame = Instance.new("Frame") RadarFrame.Size = UDim2.new(0, 280, 0, 185) RadarFrame.Position = UDim2.new(0.5, 390, 0.5, -92) RadarFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) RadarFrame.Active = true RadarFrame.ZIndex = 15 RadarFrame.Parent = ScreenGui Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0, 12)
 local RadarStroke = Instance.new("UIStroke", RadarFrame) RadarStroke.Thickness = 2 RadarStroke.Color = Color3.fromRGB(255, 110, 0)
 
-local RadarTitle = Instance.new("TextLabel") RadarTitle.Size = UDim2.new(1, -10, 0, 26) RadarTitle.Position = UDim2.new(0, 10, 0, 4) RadarTitle.BackgroundTransparency = 1 RadarTitle.Text = "🔮 DROP RADAR & RAKOOF HP" RadarTitle.TextColor3 = Color3.fromRGB(255, 140, 0) RadarTitle.Font = Enum.Font.GothamBold RadarTitle.TextSize = 12 RadarTitle.TextXAlignment = Enum.TextXAlignment.Left RadarTitle.Parent = RadarFrame
+makeDraggable(RadarFrame)
 
-local DisplayCard = Instance.new("Frame") DisplayCard.Size = UDim2.new(1, -16, 0, 52) DisplayCard.Position = UDim2.new(0, 8, 0, 32) DisplayCard.BackgroundColor3 = Color3.fromRGB(40, 18, 55) DisplayCard.Parent = RadarFrame Instance.new("UICorner", DisplayCard).CornerRadius = UDim.new(0, 8)
-local RadarItemName = Instance.new("TextLabel") RadarItemName.Size = UDim2.new(1, -12, 0, 20) RadarItemName.Position = UDim2.new(0, 8, 0, 4) RadarItemName.BackgroundTransparency = 1 RadarItemName.Text = "🎁 Searching drops..." RadarItemName.TextColor3 = Color3.fromRGB(255, 255, 255) RadarItemName.Font = Enum.Font.GothamBold RadarItemName.TextSize = 11 RadarItemName.TextXAlignment = Enum.TextXAlignment.Left RadarItemName.Parent = DisplayCard
-local RadarItemInfo = Instance.new("TextLabel") RadarItemInfo.Size = UDim2.new(1, -12, 0, 18) RadarItemInfo.Position = UDim2.new(0, 8, 0, 26) RadarItemInfo.BackgroundTransparency = 1 RadarItemInfo.Text = "Dist: -- | Chance: --" RadarItemInfo.TextColor3 = Color3.fromRGB(255, 160, 30) RadarItemInfo.Font = Enum.Font.Gotham RadarItemInfo.TextSize = 10 RadarItemInfo.TextXAlignment = Enum.TextXAlignment.Left RadarItemInfo.Parent = DisplayCard
+local RadarTitle = Instance.new("TextLabel") RadarTitle.Size = UDim2.new(1, -10, 0, 26) RadarTitle.Position = UDim2.new(0, 10, 0, 4) RadarTitle.BackgroundTransparency = 1 RadarTitle.Text = "🔮 DROP RADAR & RAKOOF HP" RadarTitle.TextColor3 = Color3.fromRGB(255, 140, 0) RadarTitle.Font = Enum.Font.GothamBold RadarTitle.TextSize = 12 RadarTitle.TextXAlignment = Enum.TextXAlignment.Left RadarTitle.ZIndex = 16 RadarTitle.Parent = RadarFrame
 
--- Rakoof HP Detector Widget inside Radar Frame
-local RakoofCard = Instance.new("Frame") RakoofCard.Size = UDim2.new(1, -16, 0, 60) RakoofCard.Position = UDim2.new(0, 8, 0, 90) RakoofCard.BackgroundColor3 = Color3.fromRGB(50, 15, 25) RakoofCard.Parent = RadarFrame Instance.new("UICorner", RakoofCard).CornerRadius = UDim.new(0, 8)
-local RakoofTitle = Instance.new("TextLabel") RakoofTitle.Size = UDim2.new(1, -12, 0, 18) RakoofTitle.Position = UDim2.new(0, 8, 0, 4) RakoofTitle.BackgroundTransparency = 1 RakoofTitle.Text = "👹 RAKOOF (DOOFMMY) STATUS" RakoofTitle.TextColor3 = Color3.fromRGB(255, 80, 80) RakoofTitle.Font = Enum.Font.GothamBold RakoofTitle.TextSize = 11 RakoofTitle.TextXAlignment = Enum.TextXAlignment.Left RakoofTitle.Parent = RakoofCard
-local RakoofHPLabel = Instance.new("TextLabel") RakoofHPLabel.Size = UDim2.new(1, -12, 0, 20) RakoofHPLabel.Position = UDim2.new(0, 8, 0, 26) RakoofHPLabel.BackgroundTransparency = 1 RakoofHPLabel.Text = "Searching for Rakoof..." RakoofHPLabel.TextColor3 = Color3.fromRGB(255, 200, 200) RakoofHPLabel.Font = Enum.Font.GothamBold RakoofHPLabel.TextSize = 11 RakoofHPLabel.TextXAlignment = Enum.TextXAlignment.Left RakoofHPLabel.Parent = RakoofCard
+local DisplayCard = Instance.new("Frame") DisplayCard.Size = UDim2.new(1, -16, 0, 52) DisplayCard.Position = UDim2.new(0, 8, 0, 32) DisplayCard.BackgroundColor3 = Color3.fromRGB(40, 18, 55) DisplayCard.ZIndex = 16 DisplayCard.Parent = RadarFrame Instance.new("UICorner", DisplayCard).CornerRadius = UDim.new(0, 8)
+local RadarItemName = Instance.new("TextLabel") RadarItemName.Size = UDim2.new(1, -12, 0, 20) RadarItemName.Position = UDim2.new(0, 8, 0, 4) RadarItemName.BackgroundTransparency = 1 RadarItemName.Text = "🎁 Searching drops..." RadarItemName.TextColor3 = Color3.fromRGB(255, 255, 255) RadarItemName.Font = Enum.Font.GothamBold RadarItemName.TextSize = 11 RadarItemName.TextXAlignment = Enum.TextXAlignment.Left RadarItemName.ZIndex = 17 RadarItemName.Parent = DisplayCard
+local RadarItemInfo = Instance.new("TextLabel") RadarItemInfo.Size = UDim2.new(1, -12, 0, 18) RadarItemInfo.Position = UDim2.new(0, 8, 0, 26) RadarItemInfo.BackgroundTransparency = 1 RadarItemInfo.Text = "Dist: -- | Chance: --" RadarItemInfo.TextColor3 = Color3.fromRGB(255, 160, 30) RadarItemInfo.Font = Enum.Font.Gotham RadarItemInfo.TextSize = 10 RadarItemInfo.TextXAlignment = Enum.TextXAlignment.Left RadarItemInfo.ZIndex = 17 RadarItemInfo.Parent = DisplayCard
+
+-- Rakoof Gradient HP Detector Widget inside Radar Frame
+local RakoofCard = Instance.new("Frame") RakoofCard.Size = UDim2.new(1, -16, 0, 82) RakoofCard.Position = UDim2.new(0, 8, 0, 92) RakoofCard.BackgroundColor3 = Color3.fromRGB(40, 12, 28) RakoofCard.ZIndex = 16 RakoofCard.Parent = RadarFrame Instance.new("UICorner", RakoofCard).CornerRadius = UDim.new(0, 8)
+local RakoofCardStroke = Instance.new("UIStroke", RakoofCard) RakoofCardStroke.Thickness = 1.5 RakoofCardStroke.Color = Color3.fromRGB(200, 50, 50)
+
+local RakoofTitle = Instance.new("TextLabel") RakoofTitle.Size = UDim2.new(1, -12, 0, 18) RakoofTitle.Position = UDim2.new(0, 8, 0, 4) RakoofTitle.BackgroundTransparency = 1 RakoofTitle.Text = "👹 RAKOOF (DOOFMMY) HP DETECTOR" RakoofTitle.TextColor3 = Color3.fromRGB(255, 90, 90) RakoofTitle.Font = Enum.Font.GothamBold RakoofTitle.TextSize = 11 RakoofTitle.TextXAlignment = Enum.TextXAlignment.Left RakoofTitle.ZIndex = 17 RakoofTitle.Parent = RakoofCard
+
+-- Gradient Bar Background
+local RakoofBarBg = Instance.new("Frame") RakoofBarBg.Size = UDim2.new(1, -16, 0, 20) RakoofBarBg.Position = UDim2.new(0, 8, 0, 26) RakoofBarBg.BackgroundColor3 = Color3.fromRGB(25, 8, 15) RakoofBarBg.ClipsDescendants = true RakoofBarBg.ZIndex = 17 RakoofBarBg.Parent = RakoofCard Instance.new("UICorner", RakoofBarBg).CornerRadius = UDim.new(0, 6)
+
+-- Gradient Bar Fill
+local RakoofBarFill = Instance.new("Frame") RakoofBarFill.Size = UDim2.new(1, 0, 1, 0) RakoofBarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255) RakoofBarFill.ZIndex = 18 RakoofBarFill.Parent = RakoofBarBg Instance.new("UICorner", RakoofBarFill).CornerRadius = UDim.new(0, 6)
+
+-- Dark Crimson to Vibrant Red-Orange Gradient
+local RakoofGrad = Instance.new("UIGradient")
+RakoofGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 50)),   -- Bright Red Orange
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 20, 20)), -- Crimson
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 30))     -- Dark Blood Red
+})
+RakoofGrad.Rotation = 90
+RakoofGrad.Parent = RakoofBarFill
+
+local RakoofHPLabel = Instance.new("TextLabel") RakoofHPLabel.Size = UDim2.new(1, -12, 0, 22) RakoofHPLabel.Position = UDim2.new(0, 8, 0, 52) RakoofHPLabel.BackgroundTransparency = 1 RakoofHPLabel.Text = "Searching RakoofHP & RakoofMaxHP..." RakoofHPLabel.TextColor3 = Color3.fromRGB(255, 200, 200) RakoofHPLabel.Font = Enum.Font.GothamBold RakoofHPLabel.TextSize = 11 RakoofHPLabel.TextXAlignment = Enum.TextXAlignment.Left RakoofHPLabel.ZIndex = 17 RakoofHPLabel.Parent = RakoofCard
 
 Tasks.Radar = task.spawn(function()
     while true do
@@ -417,14 +444,50 @@ Tasks.Radar = task.spawn(function()
                 end
             end
 
-            -- Detect Rakoof HP
-            local rakoofModel, _ = findTargetModel(TARGET_NAME)
-            if rakoofModel then
-                local hum = rakoofModel:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    RakoofHPLabel.Text = string.format("❤ HP: %d / %d (%d%%)", math.floor(hum.Health), math.floor(hum.MaxHealth), math.floor((hum.Health/hum.MaxHealth)*100))
-                else RakoofHPLabel.Text = "⚠️ Model found, no Humanoid" end
-            else RakoofHPLabel.Text = "👻 Rakoof Not Spawned" end
+            --------------------------------------------------------------------
+            -- DETECT BOTH RAKOOFHP AND RAKOOFMAXHP
+            --------------------------------------------------------------------
+            local curHP, maxHP = nil, nil
+
+            -- 1. Look for explicit RakoofHP and RakoofMaxHP objects (ValueBase) in Workspace or ReplicatedStorage
+            local hpObj = Workspace:FindFirstChild("RakoofHP", true) or ReplicatedStorage:FindFirstChild("RakoofHP", true)
+            local maxHpObj = Workspace:FindFirstChild("RakoofMaxHP", true) or ReplicatedStorage:FindFirstChild("RakoofMaxHP", true)
+
+            if hpObj and maxHpObj then
+                if hpObj:IsA("ValueBase") then curHP = hpObj.Value end
+                if maxHpObj:IsA("ValueBase") then maxHP = maxHpObj.Value end
+            end
+
+            -- 2. Fallback to Target Model attributes / Humanoid
+            if curHP == nil or maxHP == nil then
+                local rakoofModel, _ = findTargetModel(TARGET_NAME)
+                if rakoofModel then
+                    local attrHp = rakoofModel:GetAttribute("RakoofHP") or rakoofModel:GetAttribute("HP")
+                    local attrMaxHp = rakoofModel:GetAttribute("RakoofMaxHP") or rakoofModel:GetAttribute("MaxHP")
+                    
+                    if attrHp and attrMaxHp then
+                        curHP, maxHP = attrHp, attrMaxHp
+                    else
+                        local hum = rakoofModel:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            curHP, maxHP = hum.Health, hum.MaxHealth
+                        end
+                    end
+                end
+            end
+
+            -- Update Gradient Health Bar UI
+            if curHP ~= nil and maxHP ~= nil and maxHP > 0 then
+                local ratio = math.clamp(curHP / maxHP, 0, 1)
+                TweenService:Create(RakoofBarFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(ratio, 0, 1, 0)
+                }):Play()
+                
+                RakoofHPLabel.Text = string.format("❤ HP: %d / %d (%d%%)", math.floor(math.max(curHP, 0)), math.floor(maxHP), math.floor(ratio * 100))
+            else
+                TweenService:Create(RakoofBarFill, TweenInfo.new(0.2), {Size = UDim2.new(0, 0, 1, 0)}):Play()
+                RakoofHPLabel.Text = "👻 RakoofHP / RakoofMaxHP Not Found"
+            end
         end
         task.wait(0.25)
     end
@@ -460,7 +523,7 @@ local ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad = CreateStaffButton("🎃 TOG
 
 -- 1. FLY FEATURE
 local flyBodyVel, flyBodyGyro
-FlyBtn.MouseButton1Click:Connect(function()
+safeBindClick(FlyBtn, function()
     Features.Fly = not Features.Fly
     updateStateUI(FlyBtn, FlyStroke, FlyGrad, Features.Fly, "🦅 FLY HACK: ON", "🦅 FLY HACK: OFF")
     if Connections.Fly then Connections.Fly:Disconnect() Connections.Fly = nil end
@@ -499,7 +562,7 @@ FlyBtn.MouseButton1Click:Connect(function()
 end)
 
 -- 2. INFINITE JUMP LOOP FEATURE
-InfJumpBtn.MouseButton1Click:Connect(function()
+safeBindClick(InfJumpBtn, function()
     Features.InfJump = not Features.InfJump
     updateStateUI(InfJumpBtn, InfJumpStroke, InfJumpGrad, Features.InfJump, "🦘 INFINITE JUMP LOOP: ON", "🦘 INFINITE JUMP LOOP: OFF")
     if Connections.InfJump then Connections.InfJump:Disconnect() Connections.InfJump = nil end
@@ -514,7 +577,7 @@ InfJumpBtn.MouseButton1Click:Connect(function()
 end)
 
 -- 3. FULL BRIGHT FEATURE
-FullBrightBtn.MouseButton1Click:Connect(function()
+safeBindClick(FullBrightBtn, function()
     Features.FullBright = not Features.FullBright
     updateStateUI(FullBrightBtn, FullBrightStroke, FullBrightGrad, Features.FullBright, "💡 FULL BRIGHT: ON", "💡 FULL BRIGHT: OFF")
     if Features.FullBright then
@@ -533,7 +596,7 @@ FullBrightBtn.MouseButton1Click:Connect(function()
 end)
 
 -- 4. TORSO VFX ATTACHER FEATURE
-TorsoVFXBtn.MouseButton1Click:Connect(function()
+safeBindClick(TorsoVFXBtn, function()
     Features.TorsoVFX = not Features.TorsoVFX
     updateStateUI(TorsoVFXBtn, TorsoVFXStroke, TorsoVFXGrad, Features.TorsoVFX, "🔥 TORSO VFX ATTACHER: ON", "🔥 TORSO VFX ATTACHER: OFF")
     local char = LocalPlayer.Character
@@ -563,7 +626,7 @@ TorsoVFXBtn.MouseButton1Click:Connect(function()
 end)
 
 -- 5. FORCE DROP 80,000%
-ForceDropBtn.MouseButton1Click:Connect(function()
+safeBindClick(ForceDropBtn, function()
     Features.ForceDrop = not Features.ForceDrop
     updateStateUI(ForceDropBtn, ForceDropStroke, ForceDropGrad, Features.ForceDrop, "💥 FORCE DROP 80000%: ON", "💥 FORCE DROP 80000%: OFF")
     if Connections.ForceDrop then Connections.ForceDrop:Disconnect() Connections.ForceDrop = nil end
@@ -577,15 +640,13 @@ ForceDropBtn.MouseButton1Click:Connect(function()
 end)
 
 -- TOGGLE PLAYER HP GUI
-ToggleHPGuiBtn.MouseButton1Click:Connect(function()
+safeBindClick(ToggleHPGuiBtn, function()
     HealthFrame.Visible = not HealthFrame.Visible
     updateStateUI(ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad, HealthFrame.Visible, "🎃 TOGGLE PLAYER HP GUI: ON", "🎃 TOGGLE PLAYER HP GUI: OFF")
 end)
 
---------------------------------------------------------------------------------
--- EXISTING CORE FEATURE BINDINGS
---------------------------------------------------------------------------------
-AutoPickupBtn.MouseButton1Click:Connect(function()
+-- AUTO PICKUP
+safeBindClick(AutoPickupBtn, function()
     Features.AutoPickup = not Features.AutoPickup
     updateStateUI(AutoPickupBtn, AutoPickupStroke, AutoPickupGrad, Features.AutoPickup, "🎁 Auto Pickup: ON", "🎁 Golden Staff Auto Pickup: OFF")
     if Connections.Pickup then Connections.Pickup:Disconnect() Connections.Pickup = nil end
@@ -605,14 +666,16 @@ AutoPickupBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-AutoAttackBtn.MouseButton1Click:Connect(function()
+-- AUTO ATTACK / SPAM CLICKER
+safeBindClick(AutoAttackBtn, function()
     Features.AutoAttack = not Features.AutoAttack
     updateStateUI(AutoAttackBtn, AutoAttackStroke, AutoAttackGrad, Features.AutoAttack, "⚔ Spam Clicker: ON", "⚔️ Fast Spam Clicker: OFF")
     if Connections.Attack then Connections.Attack:Disconnect() Connections.Attack = nil end
     if Features.AutoAttack then Connections.Attack = RunService.RenderStepped:Connect(executeSpamClick) end
 end)
 
-AIBattleBtn.MouseButton1Click:Connect(function()
+-- AI BATTLE
+safeBindClick(AIBattleBtn, function()
     Features.AIBattle = not Features.AIBattle
     updateStateUI(AIBattleBtn, AIBattleStroke, AIBattleGrad, Features.AIBattle, "🤖 AI BATTLE (Rake): ON", "🤖 AI BATTLE (The_Rake): OFF")
     if Connections.AIBattle then Connections.AIBattle:Disconnect() Connections.AIBattle = nil end
@@ -629,7 +692,8 @@ AIBattleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-BringBossBtn.MouseButton1Click:Connect(function()
+-- BRING BOSS
+safeBindClick(BringBossBtn, function()
     Features.BringBoss = not Features.BringBoss
     updateStateUI(BringBossBtn, BringBossStroke, BringBossGrad, Features.BringBoss, "🧲 Bring Boss: ON", "🧲 Bring Boss To Player: OFF")
     if Connections.BringBoss then Connections.BringBoss:Disconnect() Connections.BringBoss = nil end
@@ -642,7 +706,8 @@ BringBossBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-BringRakoofBtn.MouseButton1Click:Connect(function()
+-- BRING RAKOOF
+safeBindClick(BringRakoofBtn, function()
     Features.BringRakoof = not Features.BringRakoof
     updateStateUI(BringRakoofBtn, BringRakoofStroke, BringRakoofGrad, Features.BringRakoof, "🧲 Bring Rakoof: ON", "🧲 Bring Rakoof: OFF")
     if Connections.BringRakoof then Connections.BringRakoof:Disconnect() Connections.BringRakoof = nil end
@@ -655,12 +720,11 @@ BringRakoofBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-ToggleIcon.MouseButton1Click:Connect(function()
-    if not hasDragged then
-        MainFrame.Visible = not MainFrame.Visible
-        RadarFrame.Visible = MainFrame.Visible
-        SpeedFrame.Visible = MainFrame.Visible
-    end
+-- TOGGLE HUB VISIBILITY
+safeBindClick(ToggleIcon, function()
+    MainFrame.Visible = not MainFrame.Visible
+    RadarFrame.Visible = MainFrame.Visible
+    SpeedFrame.Visible = MainFrame.Visible
 end)
 
 Connections.ToggleKey = UserInputService.InputBegan:Connect(function(input, gpe)
