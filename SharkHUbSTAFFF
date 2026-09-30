@@ -1,6 +1,6 @@
--- SharkHub V4.8 | Refined & Anti-Leak Edition
+-- SharkHub V5.0 | Halloween Spooky Edition 🎃👻
 
--- Global Cleanup Handler (Prevents duplicated tasks/connections on re-execution)
+-- Global Cleanup Handler
 if getgenv().SharkHubCleanup then
     pcall(getgenv().SharkHubCleanup)
 end
@@ -10,6 +10,8 @@ local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
 
 local VirtualInputManager = pcall(function() return game:GetService("VirtualInputManager") end) and game:GetService("VirtualInputManager") or nil
 local VirtualUser = pcall(function() return game:GetService("VirtualUser") end) and game:GetService("VirtualUser") or nil
@@ -18,7 +20,7 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 --------------------------------------------------------------------------------
--- TARGET LISTS & LOOKUPS
+-- TARGET LISTS & CONFIG
 --------------------------------------------------------------------------------
 local TARGET_ITEMS_LIST = {
     "GoldenApple", "LegendaryEnergy", "IgnitionFlame", 
@@ -45,13 +47,14 @@ local RAKE_NAME = "the_rake"
 local TARGET_NAME = "doofmmy"
 local TOGGLE_KEY = Enum.KeyCode.RightControl
 
--- Global State Matrix
+-- Feature Matrix
 local Features = {
     BroMaxLuck = false, AutoDisableCone = false, AutoTrade = false,
     AIBattle = false, AutoAttack = false, BringBoss = false, ExpandHitbox = false,
     AutoPickup = false, TriggerBot = false, AutoEscape = false,
     BringRakoof = false, ForceDrop = false, UseWhitelist = true,
-    Luck250 = false, Luck500 = false, Luck750 = false, Luck1000 = false
+    Luck250 = false, Luck500 = false, Luck750 = false, Luck1000 = false,
+    Fly = false, InfJump = false, FullBright = false, TorsoVFX = false
 }
 
 local SELECTED_TRADE_ITEM = "SoulSurvivor"
@@ -60,57 +63,45 @@ local Connections, Tasks = {}, {}
 local currentSetSpeed = nil
 local escapeDebounce = false
 
+-- Backup Original Lighting Settings
+local OrigLighting = {
+    Ambient = Lighting.Ambient,
+    OutdoorAmbient = Lighting.OutdoorAmbient,
+    Brightness = Lighting.Brightness,
+    ClockTime = Lighting.ClockTime,
+    GlobalShadows = Lighting.GlobalShadows
+}
+
 -- Cleanup registration
 getgenv().SharkHubCleanup = function()
-    for name, conn in pairs(Connections) do
-        if conn then conn:Disconnect() end
-    end
-    for name, taskRef in pairs(Tasks) do
-        if taskRef then pcall(task.cancel, taskRef) end
-    end
+    for _, conn in pairs(Connections) do if conn then conn:Disconnect() end end
+    for _, taskRef in pairs(Tasks) do if taskRef then pcall(task.cancel, taskRef) end end
     table.clear(Connections)
     table.clear(Tasks)
+    if Features.FullBright then
+        Lighting.Ambient = OrigLighting.Ambient
+        Lighting.OutdoorAmbient = OrigLighting.OutdoorAmbient
+        Lighting.Brightness = OrigLighting.Brightness
+        Lighting.ClockTime = OrigLighting.ClockTime
+        Lighting.GlobalShadows = OrigLighting.GlobalShadows
+    end
     if PlayerGui:FindFirstChild("SharkHubStaffGui") then PlayerGui.SharkHubStaffGui:Destroy() end
     if PlayerGui:FindFirstChild("SharkHubSpeedGui") then PlayerGui.SharkHubSpeedGui:Destroy() end
+    if PlayerGui:FindFirstChild("SharkHubPlayerHPGui") then PlayerGui.SharkHubPlayerHPGui:Destroy() end
 end
 
 --------------------------------------------------------------------------------
--- COLOR GRADIENTS
+-- HALLOWEEN THEME GRADIENTS & COLORS
 --------------------------------------------------------------------------------
-local GREEN_OFF_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 62, 38)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(38, 98, 60)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 50, 30))
+local ORANGE_OFF_GRADIENT = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 25, 5)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(95, 40, 10)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 20, 0))
 })
-local GREEN_ON_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 235, 110)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 170)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 160, 80))
-})
-local RED_OFF_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 40, 40)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 60, 60)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 30, 30))
-})
-local SPECIAL_ORANGE_OFF = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(240, 130, 20)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 175, 40)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 110, 10))
-})
-local SPECIAL_ORANGE_ON = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 180, 0)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 235, 80)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 150, 0))
-})
-local GRAY_WHITE_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 70, 70)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(235, 235, 235)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 70, 70))
-})
-local FIRE_MAX_LUCK_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 30, 0)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 150, 0)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 220, 0))
+local ORANGE_ON_GRADIENT = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 110, 0)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 160, 30)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 80, 0))
 })
 
 --------------------------------------------------------------------------------
@@ -118,22 +109,9 @@ local FIRE_MAX_LUCK_GRADIENT = ColorSequence.new({
 --------------------------------------------------------------------------------
 local function safeTouchInterest(part1, part2)
     if typeof(firetouchinterest) == "function" then
-        pcall(function()
-            firetouchinterest(part1, part2, 0)
-            firetouchinterest(part1, part2, 1)
-        end)
+        pcall(function() firetouchinterest(part1, part2, 0) firetouchinterest(part1, part2, 1) end)
     else
-        pcall(function()
-            if not part2.Anchored then
-                part2.CFrame = part1.CFrame
-            end
-        end)
-    end
-end
-
-local function safeProximityPrompt(prompt)
-    if typeof(fireproximityprompt) == "function" then
-        pcall(function() fireproximityprompt(prompt) end)
+        pcall(function() if not part2.Anchored then part2.CFrame = part1.CFrame end end)
     end
 end
 
@@ -185,52 +163,6 @@ local function isWhitelistedItem(name)
     return false
 end
 
-local function runSlashLoop10x()
-    if #cachedRemotes.GiftRain == 0 and #cachedRemotes.LootItem == 0 and #cachedRemotes.SpawnItem == 0 then updateRemoteCache() end
-
-    for iteration = 1, 10 do
-        for _, obj in ipairs(cachedRemotes.SpawnItem) do
-            pcall(function()
-                if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2") else obj:FireServer("SlashProjectile2") end
-            end)
-        end
-        for _, obj in ipairs(cachedRemotes.GiftRain) do
-            pcall(function()
-                if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2", 100) else obj:FireServer("SlashProjectile2", 100) end
-            end)
-        end
-        for _, obj in ipairs(cachedRemotes.LootItem) do
-            pcall(function()
-                if obj:IsA("BindableEvent") then obj:Fire("SlashProjectile2") else obj:FireServer("SlashProjectile2") end
-            end)
-        end
-
-        local _, rakePart = findTargetModel(RAKE_NAME)
-        if rakePart then
-            local rakeCFrame = rakePart.CFrame
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj.Name == "SlashProjectile2" then
-                    pcall(function()
-                        if obj:IsA("Model") then obj:PivotTo(rakeCFrame)
-                        elseif obj:IsA("BasePart") then obj.CFrame = rakeCFrame end
-                    end)
-                end
-            end
-        end
-        task.wait(0.15)
-    end
-end
-
-local function triggerGiftRainAndLoot(multiplier)
-    if #cachedRemotes.GiftRain == 0 and #cachedRemotes.LootItem == 0 then updateRemoteCache() end
-    for _, obj in ipairs(cachedRemotes.GiftRain) do
-        pcall(function() if obj:IsA("BindableEvent") then obj:Fire(multiplier) else obj:FireServer(multiplier) end end)
-    end
-    for _, obj in ipairs(cachedRemotes.LootItem) do
-        pcall(function() if obj:IsA("BindableEvent") then obj:Fire(multiplier) else obj:FireServer(multiplier) end end)
-    end
-end
-
 local function getDropContainers()
     local containers = {}
     local rsDrops = ReplicatedStorage:FindFirstChild("Drops")
@@ -242,16 +174,8 @@ local function getDropContainers()
     return containers
 end
 
-local function playerHasItem(itemName)
-    local char = LocalPlayer.Character
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if char and char:FindFirstChild(itemName) then return true end
-    if backpack and backpack:FindFirstChild(itemName) then return true end
-    return false
-end
-
 --------------------------------------------------------------------------------
--- MAIN HUB GUI
+-- MAIN HALLOWEEN GUI
 --------------------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SharkHubStaffGui"
@@ -260,18 +184,17 @@ ScreenGui.DisplayOrder = 100
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
--- Toggle Icon
+-- Toggle Icon (Spooky Pumpkin)
 local ToggleIcon = Instance.new("TextButton")
-ToggleIcon.Size = UDim2.new(0, 50, 0, 50)
-ToggleIcon.Position = UDim2.new(0, 20, 0.5, -25)
-ToggleIcon.BackgroundColor3 = Color3.fromRGB(22, 62, 38)
-ToggleIcon.Text = "S"
-ToggleIcon.TextColor3 = Color3.fromRGB(0, 255, 170)
-ToggleIcon.Font = Enum.Font.FredokaOne
-ToggleIcon.TextSize = 32
+ToggleIcon.Size = UDim2.new(0, 52, 0, 52)
+ToggleIcon.Position = UDim2.new(0, 20, 0.5, -26)
+ToggleIcon.BackgroundColor3 = Color3.fromRGB(35, 12, 45)
+ToggleIcon.Text = "🎃"
+ToggleIcon.TextSize = 30
 ToggleIcon.ZIndex = 200
 ToggleIcon.Parent = ScreenGui
-Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(0, 16)
+local IconStroke = Instance.new("UIStroke", ToggleIcon) IconStroke.Thickness = 2 IconStroke.Color = Color3.fromRGB(255, 120, 0)
 
 local iconDragging, iconDragInput, iconDragStart, iconStartPos, hasDragged = false, nil, nil, nil, false
 ToggleIcon.InputBegan:Connect(function(input)
@@ -293,43 +216,43 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Main Frame
+-- Main Frame (Dark Spooky Purple / Void Black)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 750, 0, 480)
-MainFrame.Position = UDim2.new(0.5, -375, 0.5, -240)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 52, 32)
+MainFrame.Size = UDim2.new(0, 760, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -380, 0.5, -250)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
 MainFrame.ClipsDescendants = false
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
-local MainStroke = Instance.new("UIStroke", MainFrame) MainStroke.Thickness = 2 MainStroke.Color = Color3.fromRGB(0, 255, 150)
+local MainStroke = Instance.new("UIStroke", MainFrame) MainStroke.Thickness = 2.5 MainStroke.Color = Color3.fromRGB(255, 110, 0)
 
 local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 52)
-TitleBar.BackgroundColor3 = Color3.fromRGB(22, 62, 38)
+TitleBar.Size = UDim2.new(1, 0, 0, 54)
+TitleBar.BackgroundColor3 = Color3.fromRGB(32, 14, 46)
 TitleBar.Parent = MainFrame
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 16)
 
 local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(0.6, 0, 1, 0) TitleText.Position = UDim2.new(0, 18, 0, 0) TitleText.BackgroundTransparency = 1
-TitleText.Text = "🦈 SHARK HUB — ULTIMATE MASTER EDITION 🟢" TitleText.TextColor3 = Color3.fromRGB(0, 255, 170)
+TitleText.Size = UDim2.new(0.65, 0, 1, 0) TitleText.Position = UDim2.new(0, 18, 0, 0) TitleText.BackgroundTransparency = 1
+TitleText.Text = "🎃 SHARK HUB V5 — HALLOWEEN SPOOKY HUB 👻" TitleText.TextColor3 = Color3.fromRGB(255, 140, 0)
 TitleText.Font = Enum.Font.GothamBold TitleText.TextSize = 15 TitleText.TextXAlignment = Enum.TextXAlignment.Left TitleText.Parent = TitleBar
 
 local MinimizeBtn = Instance.new("TextButton") MinimizeBtn.Size = UDim2.new(0, 32, 0, 32) MinimizeBtn.Position = UDim2.new(1, -82, 0.5, -16)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(245, 150, 60) MinimizeBtn.Text = "-" MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) MinimizeBtn.Font = Enum.Font.GothamBold MinimizeBtn.Parent = TitleBar
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) MinimizeBtn.Text = "-" MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) MinimizeBtn.Font = Enum.Font.GothamBold MinimizeBtn.Parent = TitleBar
 Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 8)
 
 local CloseBtn = Instance.new("TextButton") CloseBtn.Size = UDim2.new(0, 32, 0, 32) CloseBtn.Position = UDim2.new(1, -44, 0.5, -16)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(235, 75, 80) CloseBtn.Text = "X" CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255) CloseBtn.Font = Enum.Font.GothamBold CloseBtn.Parent = TitleBar
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40) CloseBtn.Text = "X" CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255) CloseBtn.Font = Enum.Font.GothamBold CloseBtn.Parent = TitleBar
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
 
 local ScrollingFrame = Instance.new("ScrollingFrame")
-ScrollingFrame.Size = UDim2.new(1, -24, 1, -68) ScrollingFrame.Position = UDim2.new(0, 12, 0, 58)
-ScrollingFrame.BackgroundTransparency = 1 ScrollingFrame.ScrollBarThickness = 5 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
+ScrollingFrame.Size = UDim2.new(1, -24, 1, -70) ScrollingFrame.Position = UDim2.new(0, 12, 0, 60)
+ScrollingFrame.BackgroundTransparency = 1 ScrollingFrame.ScrollBarThickness = 6 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 120, 0)
 ScrollingFrame.Parent = MainFrame
 
 MinimizeBtn.MouseButton1Click:Connect(function()
     ScrollingFrame.Visible = not ScrollingFrame.Visible
-    MainFrame.Size = ScrollingFrame.Visible and UDim2.new(0, 750, 0, 480) or UDim2.new(0, 750, 0, 52)
+    MainFrame.Size = ScrollingFrame.Visible and UDim2.new(0, 760, 0, 500) or UDim2.new(0, 760, 0, 54)
     MinimizeBtn.Text = ScrollingFrame.Visible and "-" or "+"
 end)
 CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
@@ -343,135 +266,129 @@ end)
 
 local function CreateStaffButton(text, order, initialActive)
     local btn = Instance.new("TextButton")
-    btn.BackgroundColor3 = Color3.fromRGB(22, 62, 38) btn.Text = text btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 15, 48) btn.Text = text btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.LayoutOrder = order btn.Parent = ScrollingFrame
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
-    local grad = Instance.new("UIGradient") grad.Color = initialActive and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT grad.Rotation = 90 grad.Parent = btn
-    local stroke = Instance.new("UIStroke", btn) stroke.Thickness = 1.5 stroke.Color = initialActive and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+    local grad = Instance.new("UIGradient") grad.Color = initialActive and ORANGE_ON_GRADIENT or ORANGE_OFF_GRADIENT grad.Rotation = 90 grad.Parent = btn
+    local stroke = Instance.new("UIStroke", btn) stroke.Thickness = 1.5 stroke.Color = initialActive and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(100, 45, 120)
     return btn, stroke, grad
 end
 
 local function updateStateUI(btn, stroke, grad, state, textOn, textOff)
     btn.Text = state and textOn or textOff
-    grad.Color = state and GREEN_ON_GRADIENT or GREEN_OFF_GRADIENT
-    stroke.Color = state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(40, 130, 80)
+    grad.Color = state and ORANGE_ON_GRADIENT or ORANGE_OFF_GRADIENT
+    stroke.Color = state and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(100, 45, 120)
 end
 
 --------------------------------------------------------------------------------
--- SPEED CHARGER GUI
+-- PLAYER HEALTH BAR GUI
 --------------------------------------------------------------------------------
-local SpeedGui = Instance.new("ScreenGui")
-SpeedGui.Name = "SharkHubSpeedGui"
-SpeedGui.ResetOnSpawn = false
-SpeedGui.DisplayOrder = 105
-SpeedGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-SpeedGui.Parent = PlayerGui
+local HealthGui = Instance.new("ScreenGui")
+HealthGui.Name = "SharkHubPlayerHPGui"
+HealthGui.ResetOnSpawn = false
+HealthGui.DisplayOrder = 110
+HealthGui.Parent = PlayerGui
 
-local SpeedFrame = Instance.new("Frame")
-SpeedFrame.Size = UDim2.new(0, 250, 0, 175)
-SpeedFrame.Position = UDim2.new(0.02, 0, 0.35, 0)
-SpeedFrame.BackgroundColor3 = Color3.fromRGB(18, 52, 32)
-SpeedFrame.Parent = SpeedGui
-Instance.new("UICorner", SpeedFrame).CornerRadius = UDim.new(0, 12)
-local SpeedFrameStroke = Instance.new("UIStroke", SpeedFrame)
-SpeedFrameStroke.Thickness = 2
-SpeedFrameStroke.Color = Color3.fromRGB(0, 255, 150)
+local HealthFrame = Instance.new("Frame")
+HealthFrame.Size = UDim2.new(0, 260, 0, 85)
+HealthFrame.Position = UDim2.new(0.02, 0, 0.72, 0)
+HealthFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
+HealthFrame.Parent = HealthGui
+Instance.new("UICorner", HealthFrame).CornerRadius = UDim.new(0, 12)
+local HPFrameStroke = Instance.new("UIStroke", HealthFrame) HPFrameStroke.Thickness = 2 HPFrameStroke.Color = Color3.fromRGB(255, 110, 0)
 
-local speedDragging, speedDragInput, speedDragStart, speedStartPos = false, nil, nil, nil
-SpeedFrame.InputBegan:Connect(function(input)
+local hpDragging, hpDragInput, hpDragStart, hpStartPos = false, nil, nil, nil
+HealthFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        speedDragging = true speedDragStart = input.Position speedStartPos = SpeedFrame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then speedDragging = false end end)
+        hpDragging = true hpDragStart = input.Position hpStartPos = HealthFrame.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then hpDragging = false end end)
     end
 end)
-SpeedFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then speedDragInput = input end
+HealthFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then hpDragInput = input end
 end)
 UserInputService.InputChanged:Connect(function(input)
-    if input == speedDragInput and speedDragging then
-        local delta = input.Position - speedDragStart
-        SpeedFrame.Position = UDim2.new(speedStartPos.X.Scale, speedStartPos.X.Offset + delta.X, speedStartPos.Y.Scale, speedStartPos.Y.Offset + delta.Y)
+    if input == hpDragInput and hpDragging then
+        local delta = input.Position - hpDragStart
+        HealthFrame.Position = UDim2.new(hpStartPos.X.Scale, hpStartPos.X.Offset + delta.X, hpStartPos.Y.Scale, hpStartPos.Y.Offset + delta.Y)
     end
 end)
 
-local SpeedTitleBar = Instance.new("TextLabel")
-SpeedTitleBar.Size = UDim2.new(1, 0, 0, 32) SpeedTitleBar.BackgroundTransparency = 1
-SpeedTitleBar.Text = "⚡ SPEED CHARGER V1" SpeedTitleBar.TextColor3 = Color3.fromRGB(0, 255, 170)
-SpeedTitleBar.Font = Enum.Font.GothamBold SpeedTitleBar.TextSize = 13 SpeedTitleBar.Parent = SpeedFrame
+local HPHeader = Instance.new("Frame") HPHeader.Size = UDim2.new(1, 0, 0, 26) HPHeader.BackgroundTransparency = 1 HPHeader.Parent = HealthFrame
+local HPTitle = Instance.new("TextLabel") HPTitle.Size = UDim2.new(0.7, 0, 1, 0) HPTitle.Position = UDim2.new(0, 10, 0, 0) HPTitle.BackgroundTransparency = 1
+HPTitle.Text = "🎃 PLAYER HEALTH" HPTitle.TextColor3 = Color3.fromRGB(255, 140, 0) HPTitle.Font = Enum.Font.GothamBold HPTitle.TextSize = 12 HPTitle.TextXAlignment = Enum.TextXAlignment.Left HPTitle.Parent = HPHeader
 
-local SpeedInput = Instance.new("TextBox")
-SpeedInput.Size = UDim2.new(0.88, 0, 0, 32) SpeedInput.Position = UDim2.new(0.06, 0, 0.22, 0)
-SpeedInput.BackgroundColor3 = Color3.fromRGB(12, 36, 22) SpeedInput.Text = "50" SpeedInput.PlaceholderText = "Type Speed Amount..."
-SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255) SpeedInput.Font = Enum.Font.GothamBold SpeedInput.TextSize = 13 SpeedInput.Parent = SpeedFrame
-Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 8)
-local SpeedInputStroke = Instance.new("UIStroke", SpeedInput) SpeedInputStroke.Thickness = 1 SpeedInputStroke.Color = Color3.fromRGB(0, 255, 150)
+local HPMinBtn = Instance.new("TextButton") HPMinBtn.Size = UDim2.new(0, 20, 0, 20) HPMinBtn.Position = UDim2.new(1, -48, 0, 3) HPMinBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 0) HPMinBtn.Text = "-" HPMinBtn.TextColor3 = Color3.new(1,1,1) HPMinBtn.Font = Enum.Font.GothamBold HPMinBtn.Parent = HPHeader Instance.new("UICorner", HPMinBtn).CornerRadius = UDim.new(0, 5)
+local HPCloseBtn = Instance.new("TextButton") HPCloseBtn.Size = UDim2.new(0, 20, 0, 20) HPCloseBtn.Position = UDim2.new(1, -24, 0, 3) HPCloseBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) HPCloseBtn.Text = "X" HPCloseBtn.TextColor3 = Color3.new(1,1,1) HPCloseBtn.Font = Enum.Font.GothamBold HPCloseBtn.Parent = HPHeader Instance.new("UICorner", HPCloseBtn).CornerRadius = UDim.new(0, 5)
 
-local ApplySpeedBtn = Instance.new("TextButton")
-ApplySpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) ApplySpeedBtn.Position = UDim2.new(0.06, 0, 0.46, 0)
-ApplySpeedBtn.BackgroundColor3 = Color3.fromRGB(22, 62, 38) ApplySpeedBtn.Text = "⚡ APPLY SPEED" ApplySpeedBtn.TextColor3 = Color3.fromRGB(0, 255, 170)
-ApplySpeedBtn.Font = Enum.Font.GothamBold ApplySpeedBtn.TextSize = 12 ApplySpeedBtn.Parent = SpeedFrame
-Instance.new("UICorner", ApplySpeedBtn).CornerRadius = UDim.new(0, 8)
-local ApplySpeedGrad = Instance.new("UIGradient") ApplySpeedGrad.Color = GREEN_ON_GRADIENT ApplySpeedGrad.Rotation = 90 ApplySpeedGrad.Parent = ApplySpeedBtn
+local HPContainer = Instance.new("Frame") HPContainer.Size = UDim2.new(1, -20, 0, 42) HPContainer.Position = UDim2.new(0, 10, 0, 32) HPContainer.BackgroundTransparency = 1 HPContainer.Parent = HealthFrame
 
-local OffSpeedBtn = Instance.new("TextButton")
-OffSpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) OffSpeedBtn.Position = UDim2.new(0.06, 0, 0.70, 0)
-OffSpeedBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20) OffSpeedBtn.Text = "🛑 TURN OFF (RESET SPEED)" OffSpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OffSpeedBtn.Font = Enum.Font.GothamBold OffSpeedBtn.TextSize = 11 OffSpeedBtn.Parent = SpeedFrame
-Instance.new("UICorner", OffSpeedBtn).CornerRadius = UDim.new(0, 8)
-local OffSpeedGrad = Instance.new("UIGradient") OffSpeedGrad.Color = RED_OFF_GRADIENT OffSpeedGrad.Rotation = 90 OffSpeedGrad.Parent = OffSpeedBtn
+local HPBarBg = Instance.new("Frame") HPBarBg.Size = UDim2.new(1, 0, 0, 20) HPBarBg.Position = UDim2.new(0, 0, 0, 0) HPBarBg.BackgroundColor3 = Color3.fromRGB(40, 15, 50) HPBarBg.Parent = HPContainer Instance.new("UICorner", HPBarBg).CornerRadius = UDim.new(0, 6)
+local HPBarFill = Instance.new("Frame") HPBarFill.Size = UDim2.new(1, 0, 1, 0) HPBarFill.BackgroundColor3 = Color3.fromRGB(255, 110, 0) HPBarFill.Parent = HPBarBg Instance.new("UICorner", HPBarFill).CornerRadius = UDim.new(0, 6)
+local HPFillGrad = Instance.new("UIGradient") HPFillGrad.Color = ORANGE_ON_GRADIENT HPFillGrad.Parent = HPBarFill
+
+local HPTextLabel = Instance.new("TextLabel") HPTextLabel.Size = UDim2.new(1, 0, 0, 18) HPTextLabel.Position = UDim2.new(0, 0, 0, 22) HPTextLabel.BackgroundTransparency = 1
+HPTextLabel.Text = "100 / 100 HP (100%)" HPTextLabel.TextColor3 = Color3.fromRGB(255, 200, 120) HPTextLabel.Font = Enum.Font.GothamBold HPTextLabel.TextSize = 11 HPTextLabel.Parent = HPContainer
+
+HPMinBtn.MouseButton1Click:Connect(function()
+    HPContainer.Visible = not HPContainer.Visible
+    HealthFrame.Size = HPContainer.Visible and UDim2.new(0, 260, 0, 85) or UDim2.new(0, 260, 0, 28)
+    HPMinBtn.Text = HPContainer.Visible and "-" or "+"
+end)
+HPCloseBtn.MouseButton1Click:Connect(function() HealthFrame.Visible = false end)
+
+Connections.PlayerHPTracker = RunService.Heartbeat:Connect(function()
+    if HealthFrame.Visible and HPContainer.Visible then
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            local currentHP = math.clamp(hum.Health, 0, hum.MaxHealth)
+            local ratio = math.clamp(currentHP / math.max(hum.MaxHealth, 1), 0, 1)
+            TweenService:Create(HPBarFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(ratio, 0, 1, 0)}):Play()
+            HPTextLabel.Text = string.format("%d / %d HP (%d%%)", math.floor(currentHP), math.floor(hum.MaxHealth), math.floor(ratio * 100))
+        else
+            HPTextLabel.Text = "No Humanoid Found"
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- SPEED GUI & RADAR GUI
+--------------------------------------------------------------------------------
+local SpeedGui = Instance.new("ScreenGui") SpeedGui.Name = "SharkHubSpeedGui" SpeedGui.ResetOnSpawn = false SpeedGui.DisplayOrder = 105 SpeedGui.Parent = PlayerGui
+local SpeedFrame = Instance.new("Frame") SpeedFrame.Size = UDim2.new(0, 250, 0, 175) SpeedFrame.Position = UDim2.new(0.02, 0, 0.35, 0) SpeedFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) SpeedFrame.Parent = SpeedGui Instance.new("UICorner", SpeedFrame).CornerRadius = UDim.new(0, 12)
+local SpeedFrameStroke = Instance.new("UIStroke", SpeedFrame) SpeedFrameStroke.Thickness = 2 SpeedFrameStroke.Color = Color3.fromRGB(255, 110, 0)
+
+local SpeedTitleBar = Instance.new("TextLabel") SpeedTitleBar.Size = UDim2.new(1, 0, 0, 32) SpeedTitleBar.BackgroundTransparency = 1 SpeedTitleBar.Text = "⚡ SPEED CHARGER" SpeedTitleBar.TextColor3 = Color3.fromRGB(255, 140, 0) SpeedTitleBar.Font = Enum.Font.GothamBold SpeedTitleBar.TextSize = 13 SpeedTitleBar.Parent = SpeedFrame
+local SpeedInput = Instance.new("TextBox") SpeedInput.Size = UDim2.new(0.88, 0, 0, 32) SpeedInput.Position = UDim2.new(0.06, 0, 0.22, 0) SpeedInput.BackgroundColor3 = Color3.fromRGB(35, 15, 48) SpeedInput.Text = "50" SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255) SpeedInput.Font = Enum.Font.GothamBold SpeedInput.TextSize = 13 SpeedInput.Parent = SpeedFrame Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 8)
+local ApplySpeedBtn = Instance.new("TextButton") ApplySpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) ApplySpeedBtn.Position = UDim2.new(0.06, 0, 0.46, 0) ApplySpeedBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) ApplySpeedBtn.Text = "⚡ APPLY SPEED" ApplySpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) ApplySpeedBtn.Font = Enum.Font.GothamBold ApplySpeedBtn.Parent = SpeedFrame Instance.new("UICorner", ApplySpeedBtn).CornerRadius = UDim.new(0, 8)
+local OffSpeedBtn = Instance.new("TextButton") OffSpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) OffSpeedBtn.Position = UDim2.new(0.06, 0, 0.70, 0) OffSpeedBtn.BackgroundColor3 = Color3.fromRGB(100, 20, 20) OffSpeedBtn.Text = "🛑 RESET SPEED (16)" OffSpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) OffSpeedBtn.Font = Enum.Font.GothamBold OffSpeedBtn.Parent = SpeedFrame Instance.new("UICorner", OffSpeedBtn).CornerRadius = UDim.new(0, 8)
 
 ApplySpeedBtn.MouseButton1Click:Connect(function()
     local val = tonumber(SpeedInput.Text)
-    if val then
-        currentSetSpeed = val
-        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum.WalkSpeed = val end
-        ApplySpeedBtn.Text = "✅ SPEED SET: " .. val
-        task.delay(1.5, function() ApplySpeedBtn.Text = "⚡ APPLY SPEED" end)
-    else
-        ApplySpeedBtn.Text = "⚠️ INVALID NUMBER"
-        task.delay(1.5, function() ApplySpeedBtn.Text = "⚡ APPLY SPEED" end)
-    end
+    if val then currentSetSpeed = val local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = val end ApplySpeedBtn.Text = "✅ SPEED SET: " .. val task.delay(1.5, function() ApplySpeedBtn.Text = "⚡ APPLY SPEED" end) end
 end)
-
 OffSpeedBtn.MouseButton1Click:Connect(function()
-    currentSetSpeed = nil
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.WalkSpeed = 16 end
-    OffSpeedBtn.Text = "🔴 SPEED OFF (RESET TO 16)"
-    task.delay(1.5, function() OffSpeedBtn.Text = "🛑 TURN OFF (RESET SPEED)" end)
+    currentSetSpeed = nil local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = 16 end OffSpeedBtn.Text = "🔴 RESET TO 16" task.delay(1.5, function() OffSpeedBtn.Text = "🛑 RESET SPEED (16)" end)
 end)
-
 Connections.SpeedLock = RunService.Heartbeat:Connect(function()
-    if currentSetSpeed then
-        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.WalkSpeed ~= currentSetSpeed then hum.WalkSpeed = currentSetSpeed end
-    end
+    if currentSetSpeed then local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum and hum.WalkSpeed ~= currentSetSpeed then hum.WalkSpeed = currentSetSpeed end end
 end)
 
---------------------------------------------------------------------------------
--- DROP RADAR GUI
---------------------------------------------------------------------------------
-local RadarFrame = Instance.new("Frame")
-RadarFrame.Size = UDim2.new(0, 280, 0, 110) RadarFrame.Position = UDim2.new(0.5, 385, 0.5, -55)
-RadarFrame.BackgroundColor3 = Color3.fromRGB(18, 52, 32) RadarFrame.Parent = ScreenGui
-Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0, 12)
-local RadarStroke = Instance.new("UIStroke", RadarFrame) RadarStroke.Thickness = 2 RadarStroke.Color = Color3.fromRGB(0, 255, 150)
+-- Radar & Rakoof HP Detector GUI
+local RadarFrame = Instance.new("Frame") RadarFrame.Size = UDim2.new(0, 280, 0, 160) RadarFrame.Position = UDim2.new(0.5, 390, 0.5, -80) RadarFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) RadarFrame.Parent = ScreenGui Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0, 12)
+local RadarStroke = Instance.new("UIStroke", RadarFrame) RadarStroke.Thickness = 2 RadarStroke.Color = Color3.fromRGB(255, 110, 0)
 
-local RadarTitle = Instance.new("TextLabel") RadarTitle.Size = UDim2.new(1, -30, 0, 30) RadarTitle.Position = UDim2.new(0, 10, 0, 4)
-RadarTitle.BackgroundTransparency = 1 RadarTitle.Text = "🔮 CLOSEST TARGET DROP" RadarTitle.TextColor3 = Color3.fromRGB(0, 255, 170)
-RadarTitle.Font = Enum.Font.GothamBold RadarTitle.TextSize = 12 RadarTitle.TextXAlignment = Enum.TextXAlignment.Left RadarTitle.Parent = RadarFrame
+local RadarTitle = Instance.new("TextLabel") RadarTitle.Size = UDim2.new(1, -10, 0, 26) RadarTitle.Position = UDim2.new(0, 10, 0, 4) RadarTitle.BackgroundTransparency = 1 RadarTitle.Text = "🔮 DROP RADAR & RAKOOF HP" RadarTitle.TextColor3 = Color3.fromRGB(255, 140, 0) RadarTitle.Font = Enum.Font.GothamBold RadarTitle.TextSize = 12 RadarTitle.TextXAlignment = Enum.TextXAlignment.Left RadarTitle.Parent = RadarFrame
 
-local DisplayCard = Instance.new("Frame") DisplayCard.Size = UDim2.new(1, -16, 0, 60) DisplayCard.Position = UDim2.new(0, 8, 0, 38)
-DisplayCard.BackgroundColor3 = Color3.fromRGB(30, 78, 48) DisplayCard.Parent = RadarFrame Instance.new("UICorner", DisplayCard).CornerRadius = UDim.new(0, 8)
+local DisplayCard = Instance.new("Frame") DisplayCard.Size = UDim2.new(1, -16, 0, 52) DisplayCard.Position = UDim2.new(0, 8, 0, 32) DisplayCard.BackgroundColor3 = Color3.fromRGB(40, 18, 55) DisplayCard.Parent = RadarFrame Instance.new("UICorner", DisplayCard).CornerRadius = UDim.new(0, 8)
+local RadarItemName = Instance.new("TextLabel") RadarItemName.Size = UDim2.new(1, -12, 0, 20) RadarItemName.Position = UDim2.new(0, 8, 0, 4) RadarItemName.BackgroundTransparency = 1 RadarItemName.Text = "🎁 Searching drops..." RadarItemName.TextColor3 = Color3.fromRGB(255, 255, 255) RadarItemName.Font = Enum.Font.GothamBold RadarItemName.TextSize = 11 RadarItemName.TextXAlignment = Enum.TextXAlignment.Left RadarItemName.Parent = DisplayCard
+local RadarItemInfo = Instance.new("TextLabel") RadarItemInfo.Size = UDim2.new(1, -12, 0, 18) RadarItemInfo.Position = UDim2.new(0, 8, 0, 26) RadarItemInfo.BackgroundTransparency = 1 RadarItemInfo.Text = "Dist: -- | Chance: --" RadarItemInfo.TextColor3 = Color3.fromRGB(255, 160, 30) RadarItemInfo.Font = Enum.Font.Gotham RadarItemInfo.TextSize = 10 RadarItemInfo.TextXAlignment = Enum.TextXAlignment.Left RadarItemInfo.Parent = DisplayCard
 
-local RadarItemName = Instance.new("TextLabel") RadarItemName.Size = UDim2.new(1, -12, 0, 22) RadarItemName.Position = UDim2.new(0, 8, 0, 6)
-RadarItemName.BackgroundTransparency = 1 RadarItemName.Text = "🎁 Searching..." RadarItemName.TextColor3 = Color3.fromRGB(255, 255, 255)
-RadarItemName.Font = Enum.Font.GothamBold RadarItemName.TextSize = 12 RadarItemName.TextXAlignment = Enum.TextXAlignment.Left RadarItemName.Parent = DisplayCard
-
-local RadarItemInfo = Instance.new("TextLabel") RadarItemInfo.Size = UDim2.new(1, -12, 0, 20) RadarItemInfo.Position = UDim2.new(0, 8, 0, 30)
-RadarItemInfo.BackgroundTransparency = 1 RadarItemInfo.Text = "Distance: -- | Chance: --" RadarItemInfo.TextColor3 = Color3.fromRGB(0, 255, 170)
-RadarItemInfo.Font = Enum.Font.Gotham RadarItemInfo.TextSize = 11 RadarItemInfo.TextXAlignment = Enum.TextXAlignment.Left RadarItemInfo.Parent = DisplayCard
+-- Rakoof HP Detector Widget inside Radar Frame
+local RakoofCard = Instance.new("Frame") RakoofCard.Size = UDim2.new(1, -16, 0, 60) RakoofCard.Position = UDim2.new(0, 8, 0, 90) RakoofCard.BackgroundColor3 = Color3.fromRGB(50, 15, 25) RakoofCard.Parent = RadarFrame Instance.new("UICorner", RakoofCard).CornerRadius = UDim.new(0, 8)
+local RakoofTitle = Instance.new("TextLabel") RakoofTitle.Size = UDim2.new(1, -12, 0, 18) RakoofTitle.Position = UDim2.new(0, 8, 0, 4) RakoofTitle.BackgroundTransparency = 1 RakoofTitle.Text = "👹 RAKOOF (DOOFMMY) STATUS" RakoofTitle.TextColor3 = Color3.fromRGB(255, 80, 80) RakoofTitle.Font = Enum.Font.GothamBold RakoofTitle.TextSize = 11 RakoofTitle.TextXAlignment = Enum.TextXAlignment.Left RakoofTitle.Parent = RakoofCard
+local RakoofHPLabel = Instance.new("TextLabel") RakoofHPLabel.Size = UDim2.new(1, -12, 0, 20) RakoofHPLabel.Position = UDim2.new(0, 8, 0, 26) RakoofHPLabel.BackgroundTransparency = 1 RakoofHPLabel.Text = "Searching for Rakoof..." RakoofHPLabel.TextColor3 = Color3.fromRGB(255, 200, 200) RakoofHPLabel.Font = Enum.Font.GothamBold RakoofHPLabel.TextSize = 11 RakoofHPLabel.TextXAlignment = Enum.TextXAlignment.Left RakoofHPLabel.Parent = RakoofCard
 
 Tasks.Radar = task.spawn(function()
     while true do
@@ -482,9 +399,7 @@ Tasks.Radar = task.spawn(function()
                 for _, container in ipairs(getDropContainers()) do
                     for _, item in ipairs(container:GetChildren()) do
                         local matchedName = nil
-                        for tName, _ in pairs(TARGET_ITEMS_LOOKUP) do
-                            if item.Name:lower():find(tName) then matchedName = tName break end
-                        end
+                        for tName, _ in pairs(TARGET_ITEMS_LOOKUP) do if item.Name:lower():find(tName) then matchedName = tName break end end
                         if matchedName then
                             local part = item:IsA("BasePart") and item or item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
                             if part then
@@ -496,196 +411,188 @@ Tasks.Radar = task.spawn(function()
                 end
                 if closestItem and closestDistance <= 150 then
                     RadarItemName.Text = "🎁 " .. closestItem
-                    RadarItemInfo.Text = string.format("Distance: %d studs | Chance: %s", math.floor(closestDistance), ITEM_PROBABILITIES[closestItem] or "40%")
+                    RadarItemInfo.Text = string.format("Dist: %d studs | Chance: %s", math.floor(closestDistance), ITEM_PROBABILITIES[closestItem] or "40%")
                 else
-                    RadarItemName.Text = "🎁 No Target Drops Nearby" RadarItemInfo.Text = "Scanning workspace & ReplicatedStorage..."
+                    RadarItemName.Text = "🎁 No Target Drops Nearby" RadarItemInfo.Text = "Scanning workspace..."
                 end
             end
+
+            -- Detect Rakoof HP
+            local rakoofModel, _ = findTargetModel(TARGET_NAME)
+            if rakoofModel then
+                local hum = rakoofModel:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    RakoofHPLabel.Text = string.format("❤ HP: %d / %d (%d%%)", math.floor(hum.Health), math.floor(hum.MaxHealth), math.floor((hum.Health/hum.MaxHealth)*100))
+                else RakoofHPLabel.Text = "⚠️ Model found, no Humanoid" end
+            else RakoofHPLabel.Text = "👻 Rakoof Not Spawned" end
         end
-        task.wait(0.2)
+        task.wait(0.25)
     end
 end)
 
 --------------------------------------------------------------------------------
--- MAIN HUB BUTTON MATRIX
+-- HUB BUTTON BINDINGS
 --------------------------------------------------------------------------------
-local BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad = CreateStaffButton("🔥 BRO MAX LUCK 100000000%: OFF", 1, false)
-local SlashLoopBtn, SlashLoopStroke, SlashLoopGrad = CreateStaffButton("⚡ EXECUTE SLASH 10X LOOP", 2, false)
-local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 3, false)
-AutoDisableConeGrad.Color = SPECIAL_ORANGE_OFF AutoDisableConeStroke.Color = Color3.fromRGB(255, 170, 0)
+local FlyBtn, FlyStroke, FlyGrad = CreateStaffButton("🦅 FLY HACK: OFF", 1, false)
+local InfJumpBtn, InfJumpStroke, InfJumpGrad = CreateStaffButton("🦘 INFINITE JUMP LOOP: OFF", 2, false)
+local FullBrightBtn, FullBrightStroke, FullBrightGrad = CreateStaffButton("💡 FULL BRIGHT: OFF", 3, false)
+local TorsoVFXBtn, TorsoVFXStroke, TorsoVFXGrad = CreateStaffButton("🔥 TORSO VFX ATTACHER: OFF", 4, false)
 
-local AutoSurviveBtn, AutoSurviveStroke, AutoSurviveGrad = CreateStaffButton("🦴 AUTO SURVIVE ASHBOUND (BURNED BONE)", 4, false)
-AutoSurviveGrad.Color = GRAY_WHITE_GRADIENT AutoSurviveStroke.Color = Color3.fromRGB(200, 200, 200) AutoSurviveBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
-
-local AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 AUTO TRADE (SoulSurvivor): OFF", 5, false)
-local TradeDropdownBtn, _, _ = CreateStaffButton("📜 SELECT TRADE ITEM ▼", 6, false)
-
-local DropdownListFrame = Instance.new("ScrollingFrame")
-DropdownListFrame.Size = UDim2.new(0.485, 0, 0, 90) DropdownListFrame.Position = UDim2.new(0.515, 0, 0, 110)
-DropdownListFrame.BackgroundColor3 = Color3.fromRGB(15, 35, 24) DropdownListFrame.Visible = false DropdownListFrame.Parent = MainFrame
-Instance.new("UICorner", DropdownListFrame).CornerRadius = UDim.new(0, 8)
-local DropListLayout = Instance.new("UIListLayout") DropListLayout.Parent = DropdownListFrame
-
-for _, itemName in ipairs({"SoulSurvivor", "TrafficCone"}) do
-    local itemBtn = Instance.new("TextButton")
-    itemBtn.Size = UDim2.new(1, 0, 0, 28) itemBtn.BackgroundColor3 = Color3.fromRGB(28, 70, 45) itemBtn.Text = "  • " .. itemName
-    itemBtn.TextColor3 = Color3.fromRGB(0, 255, 170) itemBtn.Font = Enum.Font.GothamBold itemBtn.TextSize = 11 itemBtn.TextXAlignment = Enum.TextXAlignment.Left itemBtn.Parent = DropdownListFrame
-    itemBtn.MouseButton1Click:Connect(function()
-        SELECTED_TRADE_ITEM = itemName
-        AutoTradeToggleBtn.Text = string.format("🤝 AUTO TRADE (%s): %s", SELECTED_TRADE_ITEM, Features.AutoTrade and "ON" or "OFF")
-        DropdownListFrame.Visible = false
-    end)
-end
-TradeDropdownBtn.MouseButton1Click:Connect(function() DropdownListFrame.Visible = not DropdownListFrame.Visible end)
-
-local TriggerCalamityBtn, _, _ = CreateStaffButton("⚡ TRIGGER CALAMITY MODE", 7, false)
+local BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad = CreateStaffButton("🔥 BRO MAX LUCK 100M%: OFF", 5, false)
+local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 6, false)
+local AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 AUTO TRADE: OFF", 7, false)
 local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 8, false)
 local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 9, false)
 local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 10, false)
 local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 11, false)
 local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 12, false)
 local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 13, false)
-local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 1000%: OFF", 14, false)
-local ToolRenamerBtn, _, _ = CreateStaffButton("✏️ RENAME ALL TOOLS", 15, false)
-local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 16, false)
-local Luck500Btn, Luck500Stroke, Luck500Grad = CreateStaffButton("🔥 500% WORLD LUCK: OFF", 17, false)
-local Luck750Btn, Luck750Stroke, Luck750Grad = CreateStaffButton("💎 750% WORLD LUCK: OFF", 18, false)
-local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 19, false)
-local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 20, false)
-local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 21, false)
-local StaminaBtn, _, _ = CreateStaffButton("⚡ MAX STAMINA (SET REMOTES)", 22, false)
-local PredictDropBtn, _, _ = CreateStaffButton("🔮 CHECK NEXT ITEM DROP", 23, false)
-local PickupFilterBtn, PickupFilterStroke, PickupFilterGrad = CreateStaffButton("🎯 PICKUP FILTER: ON", 24, true)
-local ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad = CreateStaffButton("🔮 TOGGLE DROP RADAR GUI: ON", 25, true)
-local DebugPickupBtn, _, _ = CreateStaffButton("🐛 DEBUG AUTO PICKUP", 26, false)
+local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 80000%: OFF", 14, false)
+local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 15, false)
+local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 16, false)
+local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 17, false)
+local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 18, false)
+local ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad = CreateStaffButton("🎃 TOGGLE PLAYER HP GUI: ON", 19, true)
 
 --------------------------------------------------------------------------------
--- FEATURE LOGIC BINDINGS
+-- FEATURE LOGIC IMPLEMENTATIONS
 --------------------------------------------------------------------------------
-SlashLoopBtn.MouseButton1Click:Connect(function()
-    SlashLoopBtn.Text = "⚡ RUNNING (10 CYCLES)..."
-    runSlashLoop10x()
-    SlashLoopBtn.Text = "⚡ EXECUTE SLASH 10X LOOP"
+
+-- 1. FLY FEATURE
+local flyBodyVel, flyBodyGyro
+FlyBtn.MouseButton1Click:Connect(function()
+    Features.Fly = not Features.Fly
+    updateStateUI(FlyBtn, FlyStroke, FlyGrad, Features.Fly, "🦅 FLY HACK: ON", "🦅 FLY HACK: OFF")
+    if Connections.Fly then Connections.Fly:Disconnect() Connections.Fly = nil end
+    if flyBodyVel then flyBodyVel:Destroy() flyBodyVel = nil end
+    if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
+
+    if Features.Fly then
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            flyBodyVel = Instance.new("BodyVelocity")
+            flyBodyVel.MaxForce = Vector3.new(1,1,1) * 1e6
+            flyBodyVel.Velocity = Vector3.zero
+            flyBodyVel.Parent = hrp
+
+            flyBodyGyro = Instance.new("BodyGyro")
+            flyBodyGyro.MaxTorque = Vector3.new(1,1,1) * 1e6
+            flyBodyGyro.CFrame = hrp.CFrame
+            flyBodyGyro.Parent = hrp
+
+            Connections.Fly = RunService.RenderStepped:Connect(function()
+                if not Features.Fly or not hrp or not flyBodyVel or not flyBodyGyro then return end
+                local camCF = Workspace.CurrentCamera.CFrame
+                flyBodyGyro.CFrame = camCF
+                local dir = Vector3.zero
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
+                flyBodyVel.Velocity = (dir.Magnitude > 0) and (dir.Unit * 60) or Vector3.zero
+            end)
+        end
+    end
 end)
 
-BroMaxLuckBtn.MouseButton1Click:Connect(function()
-    Features.BroMaxLuck = not Features.BroMaxLuck
-    BroMaxLuckBtn.Text = Features.BroMaxLuck and "🔥 BRO MAX LUCK 100M%: ON" or "🔥 BRO MAX LUCK 100000000%: OFF"
-    BroMaxLuckGrad.Color = Features.BroMaxLuck and FIRE_MAX_LUCK_GRADIENT or GREEN_OFF_GRADIENT
-    BroMaxLuckStroke.Color = Features.BroMaxLuck and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(40, 130, 80)
-    if Features.BroMaxLuck then
-        if Tasks.BroMaxLuck then pcall(task.cancel, Tasks.BroMaxLuck) end
-        Tasks.BroMaxLuck = task.spawn(function()
-            while Features.BroMaxLuck do runSlashLoop10x() task.wait(0.2) end
+-- 2. INFINITE JUMP LOOP FEATURE
+InfJumpBtn.MouseButton1Click:Connect(function()
+    Features.InfJump = not Features.InfJump
+    updateStateUI(InfJumpBtn, InfJumpStroke, InfJumpGrad, Features.InfJump, "🦘 INFINITE JUMP LOOP: ON", "🦘 INFINITE JUMP LOOP: OFF")
+    if Connections.InfJump then Connections.InfJump:Disconnect() Connections.InfJump = nil end
+    if Features.InfJump then
+        Connections.InfJump = UserInputService.JumpRequest:Connect(function()
+            if Features.InfJump and LocalPlayer.Character then
+                local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+            end
         end)
-    elseif Tasks.BroMaxLuck then pcall(task.cancel, Tasks.BroMaxLuck) Tasks.BroMaxLuck = nil end
+    end
 end)
 
-AutoSurviveBtn.MouseButton1Click:Connect(function()
+-- 3. FULL BRIGHT FEATURE
+FullBrightBtn.MouseButton1Click:Connect(function()
+    Features.FullBright = not Features.FullBright
+    updateStateUI(FullBrightBtn, FullBrightStroke, FullBrightGrad, Features.FullBright, "💡 FULL BRIGHT: ON", "💡 FULL BRIGHT: OFF")
+    if Features.FullBright then
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.GlobalShadows = false
+    else
+        Lighting.Ambient = OrigLighting.Ambient
+        Lighting.OutdoorAmbient = OrigLighting.OutdoorAmbient
+        Lighting.Brightness = OrigLighting.Brightness
+        Lighting.ClockTime = OrigLighting.ClockTime
+        Lighting.GlobalShadows = OrigLighting.GlobalShadows
+    end
+end)
+
+-- 4. TORSO VFX ATTACHER FEATURE
+TorsoVFXBtn.MouseButton1Click:Connect(function()
+    Features.TorsoVFX = not Features.TorsoVFX
+    updateStateUI(TorsoVFXBtn, TorsoVFXStroke, TorsoVFXGrad, Features.TorsoVFX, "🔥 TORSO VFX ATTACHER: ON", "🔥 TORSO VFX ATTACHER: OFF")
     local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        if playerHasItem("BurnedBone") then
-            local rock = Workspace:FindFirstChild("Rock", true) or ReplicatedStorage:FindFirstChild("rock", true)
-            if rock then
-                local targetCFrame = rock:IsA("BasePart") and rock.CFrame or (rock:FindFirstChildWhichIsA("BasePart") and rock:FindFirstChildWhichIsA("BasePart").CFrame)
-                if targetCFrame then
-                    hrp.CFrame = targetCFrame * CFrame.new(0, 4, 0)
-                    AutoSurviveBtn.Text = "✅ ASHBOUND SURVIVED! (TP TO ROCK)"
-                end
-            else AutoSurviveBtn.Text = "⚠️ ROCK PART NOT FOUND" end
-        else AutoSurviveBtn.Text = "⚠️ NO BURNED BONE IN INV!" end
-    end
-    task.delay(2.5, function() AutoSurviveBtn.Text = "🦴 AUTO SURVIVE ASHBOUND (BURNED BONE)" end)
-end)
+    local torso = char and (char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart"))
+    
+    if torso then
+        for _, child in ipairs(torso:GetChildren()) do
+            if child.Name:find("SharkHub_VFX") then child:Destroy() end
+        end
 
-AutoDisableConeBtn.MouseButton1Click:Connect(function()
-    Features.AutoDisableCone = not Features.AutoDisableCone
-    AutoDisableConeBtn.Text = Features.AutoDisableCone and "🛑 AUTO DISABLE CONE: ON" or "🛑 AUTO DISABLE CONE: OFF"
-    AutoDisableConeGrad.Color = Features.AutoDisableCone and SPECIAL_ORANGE_ON or SPECIAL_ORANGE_OFF
-    AutoDisableConeStroke.Color = Features.AutoDisableCone and Color3.fromRGB(255, 230, 100) or Color3.fromRGB(255, 170, 0)
-
-    if Features.AutoDisableCone then
-        table.clear(visitedCones)
-        if Tasks.Cone then pcall(task.cancel, Tasks.Cone) end
-        Tasks.Cone = task.spawn(function()
-            while Features.AutoDisableCone do
-                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local eventFolder = Workspace:FindFirstChild("ConeRealm") and Workspace.ConeRealm:FindFirstChild("Event")
-                if hrp and eventFolder then
-                    for _, coneObj in ipairs(eventFolder:GetChildren()) do
-                        if not Features.AutoDisableCone then break end
-                        if coneObj:FindFirstChildOfClass("Highlight") and not visitedCones[coneObj] then
-                            local targetPart = coneObj:IsA("BasePart") and coneObj or coneObj:FindFirstChildWhichIsA("BasePart", true)
-                            if targetPart then
-                                hrp.CFrame = targetPart.CFrame * CFrame.new(0, 3, 0)
-                                visitedCones[coneObj] = true
-                                task.wait(0.15)
-                                local prompt = coneObj:FindFirstChildOfClass("ProximityPrompt", true)
-                                if prompt then safeProximityPrompt(prompt) end
-                                if VirtualInputManager then
-                                    pcall(function()
-                                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                                        task.wait(1.75)
-                                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                                    end)
-                                end
-                            end
-                        end
-                    end
+        if Features.TorsoVFX then
+            local vfxFolder = ReplicatedStorage:FindFirstChild("Vfx") or ReplicatedStorage:FindFirstChild("VFX") or ReplicatedStorage:FindFirstChild("vfx")
+            if vfxFolder then
+                local attachedCount = 0
+                for _, obj in ipairs(vfxFolder:GetChildren()) do
+                    local clone = obj:Clone()
+                    clone.Name = "SharkHub_VFX_" .. obj.Name
+                    clone.Parent = torso
+                    attachedCount = attachedCount + 1
                 end
-                task.wait(0.3)
+                TorsoVFXBtn.Text = string.format("🔥 VFX ATTACHED (%d ITEMS)", attachedCount)
+            else
+                TorsoVFXBtn.Text = "⚠️ REPLICATEDSTORAGE.VFX MISSING"
             end
-        end)
-    elseif Tasks.Cone then pcall(task.cancel, Tasks.Cone) Tasks.Cone = nil end
-end)
-
-AutoTradeToggleBtn.MouseButton1Click:Connect(function()
-    Features.AutoTrade = not Features.AutoTrade
-    AutoTradeToggleBtn.Text = string.format("🤝 AUTO TRADE (%s): %s", SELECTED_TRADE_ITEM, Features.AutoTrade and "ON" or "OFF")
-    updateStateUI(AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad, Features.AutoTrade, AutoTradeToggleBtn.Text, AutoTradeToggleBtn.Text)
-    if Features.AutoTrade then
-        if Tasks.Trade then pcall(task.cancel, Tasks.Trade) end
-        Tasks.Trade = task.spawn(function()
-            while Features.AutoTrade do
-                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local reqs = TRADE_RECIPES[SELECTED_TRADE_ITEM] or {}
-                    local ready = true
-                    for _, req in ipairs(reqs) do if not playerHasItem(req) then ready = false break end end
-                    if ready then
-                        local mark = Workspace:FindFirstChild("Mark", true) or ReplicatedStorage:FindFirstChild("Mark", true)
-                        if mark and mark:IsA("BasePart") then hrp.CFrame = mark.CFrame * CFrame.new(0, 3, 0) end
-                    end
-                end
-                task.wait(0.5)
-            end
-        end)
-    elseif Tasks.Trade then pcall(task.cancel, Tasks.Trade) Tasks.Trade = nil end
-end)
-
-ToggleIcon.MouseButton1Click:Connect(function()
-    if not hasDragged then
-        MainFrame.Visible = not MainFrame.Visible
-        RadarFrame.Visible = MainFrame.Visible
-        SpeedFrame.Visible = MainFrame.Visible
+        end
     end
 end)
 
-ToggleRadarBtn.MouseButton1Click:Connect(function()
-    RadarFrame.Visible = not RadarFrame.Visible
-    updateStateUI(ToggleRadarBtn, ToggleRadarStroke, ToggleRadarGrad, RadarFrame.Visible, "🔮 TOGGLE DROP RADAR GUI: ON", "🔮 TOGGLE DROP RADAR GUI: OFF")
+-- 5. FORCE DROP 80,000%
+ForceDropBtn.MouseButton1Click:Connect(function()
+    Features.ForceDrop = not Features.ForceDrop
+    updateStateUI(ForceDropBtn, ForceDropStroke, ForceDropGrad, Features.ForceDrop, "💥 FORCE DROP 80000%: ON", "💥 FORCE DROP 80000%: OFF")
+    if Connections.ForceDrop then Connections.ForceDrop:Disconnect() Connections.ForceDrop = nil end
+    if Features.ForceDrop then
+        Connections.ForceDrop = RunService.Heartbeat:Connect(function()
+            for _, remote in ipairs(cachedRemotes.LootItem) do pcall(function() remote:FireServer() end) end
+            for _, remote in ipairs(cachedRemotes.SpawnItem) do pcall(function() remote:FireServer() end) end
+            for _, remote in ipairs(cachedRemotes.GiftRain) do pcall(function() remote:FireServer() end) end
+        end)
+    end
 end)
 
+-- TOGGLE PLAYER HP GUI
+ToggleHPGuiBtn.MouseButton1Click:Connect(function()
+    HealthFrame.Visible = not HealthFrame.Visible
+    updateStateUI(ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad, HealthFrame.Visible, "🎃 TOGGLE PLAYER HP GUI: ON", "🎃 TOGGLE PLAYER HP GUI: OFF")
+end)
+
+--------------------------------------------------------------------------------
+-- EXISTING CORE FEATURE BINDINGS
+--------------------------------------------------------------------------------
 AutoPickupBtn.MouseButton1Click:Connect(function()
     Features.AutoPickup = not Features.AutoPickup
-    updateStateUI(AutoPickupBtn, AutoPickupStroke, AutoPickupGrad, Features.AutoPickup, "🎁 Golden Staff Auto Pickup: ON", "🎁 Golden Staff Auto Pickup: OFF")
+    updateStateUI(AutoPickupBtn, AutoPickupStroke, AutoPickupGrad, Features.AutoPickup, "🎁 Auto Pickup: ON", "🎁 Golden Staff Auto Pickup: OFF")
     if Connections.Pickup then Connections.Pickup:Disconnect() Connections.Pickup = nil end
     if Features.AutoPickup then
         Connections.Pickup = RunService.Heartbeat:Connect(function()
             local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if not hrp then return end
-
             for _, container in ipairs(getDropContainers()) do
                 for _, obj in ipairs(container:GetChildren()) do
                     if not Features.UseWhitelist or isWhitelistedItem(obj.Name) then
@@ -700,20 +607,16 @@ end)
 
 AutoAttackBtn.MouseButton1Click:Connect(function()
     Features.AutoAttack = not Features.AutoAttack
-    updateStateUI(AutoAttackBtn, AutoAttackStroke, AutoAttackGrad, Features.AutoAttack, "⚔️ Fast Spam Clicker: ON", "⚔️ Fast Spam Clicker: OFF")
+    updateStateUI(AutoAttackBtn, AutoAttackStroke, AutoAttackGrad, Features.AutoAttack, "⚔ Spam Clicker: ON", "⚔️ Fast Spam Clicker: OFF")
     if Connections.Attack then Connections.Attack:Disconnect() Connections.Attack = nil end
     if Features.AutoAttack then Connections.Attack = RunService.RenderStepped:Connect(executeSpamClick) end
 end)
 
 AIBattleBtn.MouseButton1Click:Connect(function()
     Features.AIBattle = not Features.AIBattle
-    updateStateUI(AIBattleBtn, AIBattleStroke, AIBattleGrad, Features.AIBattle, "🤖 AI BATTLE (The_Rake): ON", "🤖 AI BATTLE (The_Rake): OFF")
+    updateStateUI(AIBattleBtn, AIBattleStroke, AIBattleGrad, Features.AIBattle, "🤖 AI BATTLE (Rake): ON", "🤖 AI BATTLE (The_Rake): OFF")
     if Connections.AIBattle then Connections.AIBattle:Disconnect() Connections.AIBattle = nil end
-    if Connections.Noclip then Connections.Noclip:Disconnect() Connections.Noclip = nil end
     if Features.AIBattle then
-        Connections.Noclip = RunService.Stepped:Connect(function()
-            if LocalPlayer.Character then for _, p in ipairs(LocalPlayer.Character:GetChildren()) do if p:IsA("BasePart") then p.CanCollide = false end end end
-        end)
         Connections.AIBattle = RunService.RenderStepped:Connect(function()
             local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             local _, rakePart = findTargetModel(RAKE_NAME)
@@ -739,84 +642,6 @@ BringBossBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-HitboxBtn.MouseButton1Click:Connect(function()
-    Features.ExpandHitbox = not Features.ExpandHitbox
-    updateStateUI(HitboxBtn, HitboxStroke, HitboxGrad, Features.ExpandHitbox, "📦 Expand Hitbox: ON", "📦 Expand Target Hitbox: OFF")
-    if Connections.Hitbox then Connections.Hitbox:Disconnect() Connections.Hitbox = nil end
-    if Features.ExpandHitbox then
-        Connections.Hitbox = RunService.Heartbeat:Connect(function()
-            local _, rakePart = findTargetModel(RAKE_NAME) local _, doofPart = findTargetModel(TARGET_NAME)
-            if rakePart then rakePart.Size = Vector3.new(20, 20, 20) rakePart.Transparency = 0.7 end
-            if doofPart then doofPart.Size = Vector3.new(20, 20, 20) doofPart.Transparency = 0.7 end
-        end)
-    end
-end)
-
-TriggerBotBtn.MouseButton1Click:Connect(function()
-    Features.TriggerBot = not Features.TriggerBot
-    updateStateUI(TriggerBotBtn, TriggerBotStroke, TriggerBotGrad, Features.TriggerBot, "🎯 Trigger Bot: ON", "🎯 Trigger Bot: OFF")
-    if Connections.TriggerBot then Connections.TriggerBot:Disconnect() Connections.TriggerBot = nil end
-    if Features.TriggerBot then
-        Connections.TriggerBot = RunService.Heartbeat:Connect(function()
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local _, bossRoot = findTargetModel(RAKE_NAME) or findTargetModel(TARGET_NAME)
-                if bossRoot and (hrp.Position - bossRoot.Position).Magnitude <= 25 then executeSpamClick() end
-            end
-        end)
-    end
-end)
-
-ForceDropBtn.MouseButton1Click:Connect(function()
-    Features.ForceDrop = not Features.ForceDrop
-    updateStateUI(ForceDropBtn, ForceDropStroke, ForceDropGrad, Features.ForceDrop, "💥 FORCE DROP 1000%: ON", "💥 FORCE DROP 1000%: OFF")
-    if Features.ForceDrop then
-        updateRemoteCache()
-        if Tasks.ForceDrop then pcall(task.cancel, Tasks.ForceDrop) end
-        Tasks.ForceDrop = task.spawn(function()
-            while Features.ForceDrop do
-                for _, remote in ipairs(cachedRemotes.GiftRain) do pcall(function() remote:FireServer(1000) end) end
-                for _, remote in ipairs(cachedRemotes.LootItem) do
-                    pcall(function() for _, item in ipairs(TARGET_ITEMS_LIST) do remote:FireServer(item, 1000) end end)
-                end
-                task.wait(0.35)
-            end
-        end)
-    elseif Tasks.ForceDrop then pcall(task.cancel, Tasks.ForceDrop) Tasks.ForceDrop = nil end
-end)
-
-local function setupLuckToggle(btn, stroke, grad, featureKey, multiplier, textOn, textOff)
-    btn.MouseButton1Click:Connect(function()
-        Features[featureKey] = not Features[featureKey]
-        updateStateUI(btn, stroke, grad, Features[featureKey], textOn, textOff)
-        if Features[featureKey] then
-            if Tasks[featureKey] then pcall(task.cancel, Tasks[featureKey]) end
-            Tasks[featureKey] = task.spawn(function() while Features[featureKey] do triggerGiftRainAndLoot(multiplier) task.wait(0.35) end end)
-        elseif Tasks[featureKey] then pcall(task.cancel, Tasks[featureKey]) Tasks[featureKey] = nil end
-    end)
-end
-
-setupLuckToggle(Luck250Btn, Luck250Stroke, Luck250Grad, "Luck250", 2.5, "🍀 250% LUCK: ON", "🍀 250% WORLD LUCK: OFF")
-setupLuckToggle(Luck500Btn, Luck500Stroke, Luck500Grad, "Luck500", 5.0, "🔥 500% LUCK: ON", "🔥 500% WORLD LUCK: OFF")
-setupLuckToggle(Luck750Btn, Luck750Stroke, Luck750Grad, "Luck750", 7.5, "💎 750% LUCK: ON", "💎 750% WORLD LUCK: OFF")
-setupLuckToggle(Luck1000Btn, Luck1000Stroke, Luck1000Grad, "Luck1000", 10.0, "⚡ 1000% LUCK: ON", "⚡ 1000% WORLD LUCK: OFF")
-
-AutoEscapeBtn.MouseButton1Click:Connect(function()
-    Features.AutoEscape = not Features.AutoEscape
-    updateStateUI(AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad, Features.AutoEscape, "🚨 Auto Escape: ON", "🚨 Auto Escape (20% HP): OFF")
-    if Connections.Escape then Connections.Escape:Disconnect() Connections.Escape = nil end
-    if Features.AutoEscape then
-        Connections.Escape = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character local hum = char and char:FindFirstChildOfClass("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp and (hum.Health / hum.MaxHealth) <= 0.2 and not escapeDebounce then
-                escapeDebounce = true
-                hrp.CFrame = hrp.CFrame * CFrame.new(0, 150, 0)
-                task.delay(3, function() escapeDebounce = false end)
-            end
-        end)
-    end
-end)
-
 BringRakoofBtn.MouseButton1Click:Connect(function()
     Features.BringRakoof = not Features.BringRakoof
     updateStateUI(BringRakoofBtn, BringRakoofStroke, BringRakoofGrad, Features.BringRakoof, "🧲 Bring Rakoof: ON", "🧲 Bring Rakoof: OFF")
@@ -830,66 +655,18 @@ BringRakoofBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-StaminaBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        local remotesFolder = ReplicatedStorage:FindFirstChild("PlayerRemotes")
-        if remotesFolder and remotesFolder:FindFirstChild("SetStaminaValues") and typeof(firesignal) == "function" then
-            firesignal(remotesFolder.SetStaminaValues.OnClientEvent, 100, 15, 42, 999999)
-            StaminaBtn.Text = "✅ STAMINA BOOSTED!"
-        else StaminaBtn.Text = "⚠️ REMOTE / FIRESIGNAL MISSING" end
-    end)
-    task.delay(2, function() StaminaBtn.Text = "⚡ MAX STAMINA (SET REMOTES)" end)
-end)
-
-PredictDropBtn.MouseButton1Click:Connect(function()
-    local item = "Unknown"
-    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-        if (obj:IsA("StringValue") or obj:IsA("ObjectValue")) and (obj.Name:lower():find("nextdrop") or obj.Name:lower():find("queuedrop")) then
-            item = tostring(obj.Value) break
-        end
+ToggleIcon.MouseButton1Click:Connect(function()
+    if not hasDragged then
+        MainFrame.Visible = not MainFrame.Visible
+        RadarFrame.Visible = MainFrame.Visible
+        SpeedFrame.Visible = MainFrame.Visible
     end
-    PredictDropBtn.Text = "🔮 NEXT DROP: " .. item:upper()
-    task.delay(3, function() PredictDropBtn.Text = "🔮 CHECK NEXT ITEM DROP" end)
-end)
-
-PickupFilterBtn.MouseButton1Click:Connect(function()
-    Features.UseWhitelist = not Features.UseWhitelist
-    updateStateUI(PickupFilterBtn, PickupFilterStroke, PickupFilterGrad, Features.UseWhitelist, "🎯 PICKUP FILTER: ON", "🎯 PICKUP FILTER: OFF")
-end)
-
-ToolRenamerBtn.MouseButton1Click:Connect(function()
-    local char = LocalPlayer.Character local backpack = LocalPlayer:FindFirstChild("Backpack")
-    local function rename(container)
-        if container then for _, tool in ipairs(container:GetChildren()) do if tool:IsA("Tool") then tool.Name = "🦈 Staff Calamity Blade" end end end
-    end
-    rename(char) rename(backpack) ToolRenamerBtn.Text = "✅ ALL TOOLS RENAMED!" task.delay(1.5, function() ToolRenamerBtn.Text = "✏️ RENAME ALL TOOLS" end)
-end)
-
-TriggerCalamityBtn.MouseButton1Click:Connect(function()
-    TriggerCalamityBtn.Text = "⚡ TRIGGERING CALAMITY..." task.delay(1.5, function() TriggerCalamityBtn.Text = "⚡ TRIGGER CALAMITY MODE" end)
-end)
-
-DebugPickupBtn.MouseButton1Click:Connect(function()
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then DebugPickupBtn.Text = "⚠️ NO CHAR/HRP" task.delay(2, function() DebugPickupBtn.Text = "🐛 DEBUG AUTO PICKUP" end) return end
-    local pulledCount = 0
-    for _, container in ipairs(getDropContainers()) do
-        for _, obj in ipairs(container:GetChildren()) do
-            if not Features.UseWhitelist or isWhitelistedItem(obj.Name) then
-                local handle = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                if handle then
-                    pulledCount = pulledCount + 1
-                    safeTouchInterest(hrp, handle)
-                end
-            end
-        end
-    end
-    DebugPickupBtn.Text = string.format("✅ PULLED %d DROPS!", pulledCount)
-    task.delay(2.5, function() DebugPickupBtn.Text = "🐛 DEBUG AUTO PICKUP" end)
 end)
 
 Connections.ToggleKey = UserInputService.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == TOGGLE_KEY and MainFrame then
-        MainFrame.Visible = not MainFrame.Visible RadarFrame.Visible = MainFrame.Visible SpeedFrame.Visible = MainFrame.Visible
+        MainFrame.Visible = not MainFrame.Visible
+        RadarFrame.Visible = MainFrame.Visible
+        SpeedFrame.Visible = MainFrame.Visible
     end
 end)
