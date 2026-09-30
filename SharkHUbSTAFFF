@@ -195,8 +195,8 @@ local function getDropContainers()
     return containers
 end
 
+-- Fixed single-event click binder
 local function safeBindClick(button, callback)
-    button.MouseButton1Click:Connect(callback)
     button.Activated:Connect(callback)
 end
 
@@ -393,24 +393,19 @@ local DisplayCard = Instance.new("Frame") DisplayCard.Size = UDim2.new(1, -16, 0
 local RadarItemName = Instance.new("TextLabel") RadarItemName.Size = UDim2.new(1, -12, 0, 20) RadarItemName.Position = UDim2.new(0, 8, 0, 4) RadarItemName.BackgroundTransparency = 1 RadarItemName.Text = "🎁 Searching drops..." RadarItemName.TextColor3 = Color3.fromRGB(255, 255, 255) RadarItemName.Font = Enum.Font.GothamBold RadarItemName.TextSize = 11 RadarItemName.TextXAlignment = Enum.TextXAlignment.Left RadarItemName.ZIndex = 17 RadarItemName.Parent = DisplayCard
 local RadarItemInfo = Instance.new("TextLabel") RadarItemInfo.Size = UDim2.new(1, -12, 0, 18) RadarItemInfo.Position = UDim2.new(0, 8, 0, 26) RadarItemInfo.BackgroundTransparency = 1 RadarItemInfo.Text = "Dist: -- | Chance: --" RadarItemInfo.TextColor3 = Color3.fromRGB(255, 160, 30) RadarItemInfo.Font = Enum.Font.Gotham RadarItemInfo.TextSize = 10 RadarItemInfo.TextXAlignment = Enum.TextXAlignment.Left RadarItemInfo.ZIndex = 17 RadarItemInfo.Parent = DisplayCard
 
--- Rakoof Gradient HP Detector Widget inside Radar Frame
 local RakoofCard = Instance.new("Frame") RakoofCard.Size = UDim2.new(1, -16, 0, 82) RakoofCard.Position = UDim2.new(0, 8, 0, 92) RakoofCard.BackgroundColor3 = Color3.fromRGB(40, 12, 28) RakoofCard.ZIndex = 16 RakoofCard.Parent = RadarFrame Instance.new("UICorner", RakoofCard).CornerRadius = UDim.new(0, 8)
 local RakoofCardStroke = Instance.new("UIStroke", RakoofCard) RakoofCardStroke.Thickness = 1.5 RakoofCardStroke.Color = Color3.fromRGB(200, 50, 50)
 
 local RakoofTitle = Instance.new("TextLabel") RakoofTitle.Size = UDim2.new(1, -12, 0, 18) RakoofTitle.Position = UDim2.new(0, 8, 0, 4) RakoofTitle.BackgroundTransparency = 1 RakoofTitle.Text = "👹 RAKOOF (DOOFMMY) HP DETECTOR" RakoofTitle.TextColor3 = Color3.fromRGB(255, 90, 90) RakoofTitle.Font = Enum.Font.GothamBold RakoofTitle.TextSize = 11 RakoofTitle.TextXAlignment = Enum.TextXAlignment.Left RakoofTitle.ZIndex = 17 RakoofTitle.Parent = RakoofCard
 
--- Gradient Bar Background
 local RakoofBarBg = Instance.new("Frame") RakoofBarBg.Size = UDim2.new(1, -16, 0, 20) RakoofBarBg.Position = UDim2.new(0, 8, 0, 26) RakoofBarBg.BackgroundColor3 = Color3.fromRGB(25, 8, 15) RakoofBarBg.ClipsDescendants = true RakoofBarBg.ZIndex = 17 RakoofBarBg.Parent = RakoofCard Instance.new("UICorner", RakoofBarBg).CornerRadius = UDim.new(0, 6)
-
--- Gradient Bar Fill
 local RakoofBarFill = Instance.new("Frame") RakoofBarFill.Size = UDim2.new(1, 0, 1, 0) RakoofBarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255) RakoofBarFill.ZIndex = 18 RakoofBarFill.Parent = RakoofBarBg Instance.new("UICorner", RakoofBarFill).CornerRadius = UDim.new(0, 6)
 
--- Dark Crimson to Vibrant Red-Orange Gradient
 local RakoofGrad = Instance.new("UIGradient")
 RakoofGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 50)),   -- Bright Red Orange
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 20, 20)), -- Crimson
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 30))     -- Dark Blood Red
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 50)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 20, 20)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 30))
 })
 RakoofGrad.Rotation = 90
 RakoofGrad.Parent = RakoofBarFill
@@ -444,12 +439,7 @@ Tasks.Radar = task.spawn(function()
                 end
             end
 
-            --------------------------------------------------------------------
-            -- DETECT BOTH RAKOOFHP AND RAKOOFMAXHP
-            --------------------------------------------------------------------
             local curHP, maxHP = nil, nil
-
-            -- 1. Look for explicit RakoofHP and RakoofMaxHP objects (ValueBase) in Workspace or ReplicatedStorage
             local hpObj = Workspace:FindFirstChild("RakoofHP", true) or ReplicatedStorage:FindFirstChild("RakoofHP", true)
             local maxHpObj = Workspace:FindFirstChild("RakoofMaxHP", true) or ReplicatedStorage:FindFirstChild("RakoofMaxHP", true)
 
@@ -458,7 +448,6 @@ Tasks.Radar = task.spawn(function()
                 if maxHpObj:IsA("ValueBase") then maxHP = maxHpObj.Value end
             end
 
-            -- 2. Fallback to Target Model attributes / Humanoid
             if curHP == nil or maxHP == nil then
                 local rakoofModel, _ = findTargetModel(TARGET_NAME)
                 if rakoofModel then
@@ -476,7 +465,6 @@ Tasks.Radar = task.spawn(function()
                 end
             end
 
-            -- Update Gradient Health Bar UI
             if curHP ~= nil and maxHP ~= nil and maxHP > 0 then
                 local ratio = math.clamp(curHP / maxHP, 0, 1)
                 TweenService:Create(RakoofBarFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
