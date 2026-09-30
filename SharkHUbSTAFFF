@@ -1,6 +1,5 @@
--- SharkHub V5.0 | Halloween Spooky Edition 🎃👻
+-- SharkHub V5.0 | Halloween Spooky Edition 🎃👻 Complete Script[cite: 15]
 
--- Global Cleanup Handler
 if getgenv().SharkHubCleanup then
     pcall(getgenv().SharkHubCleanup)
 end
@@ -80,7 +79,8 @@ local Features = {
     AutoPickup = false, TriggerBot = false, AutoEscape = false,
     BringRakoof = false, ForceDrop = false, UseWhitelist = true,
     Luck250 = false, Luck500 = false, Luck750 = false, Luck1000 = false,
-    Fly = false, InfJump = false, FullBright = false, TorsoVFX = false
+    Fly = false, InfJump = false, FullBright = false, TorsoVFX = false,
+    MaxStamina = false
 }
 
 local Connections, Tasks = {}, {}
@@ -195,9 +195,10 @@ local function getDropContainers()
     return containers
 end
 
--- Fixed single-event click binder
 local function safeBindClick(button, callback)
-    button.Activated:Connect(callback)
+    button.Activated:Connect(function()
+        pcall(callback)
+    end)
 end
 
 --------------------------------------------------------------------------------
@@ -263,7 +264,7 @@ Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
 local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Size = UDim2.new(1, -24, 1, -70) ScrollingFrame.Position = UDim2.new(0, 12, 0, 60)
 ScrollingFrame.BackgroundTransparency = 1 ScrollingFrame.ScrollBarThickness = 6 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 120, 0)
-ScrollingFrame.ZIndex = 11 ScrollingFrame.Active = true ScrollingFrame.Selectable = true ScrollingFrame.Parent = MainFrame
+ScrollingFrame.ZIndex = 11 ScrollingFrame.Active = true ScrollingFrame.Selectable = true ScrollingFrame.ClipsDescendants = true ScrollingFrame.Parent = MainFrame
 
 safeBindClick(MinimizeBtn, function()
     ScrollingFrame.Visible = not ScrollingFrame.Visible
@@ -282,7 +283,7 @@ end)
 local function CreateStaffButton(text, order, initialActive)
     local btn = Instance.new("TextButton")
     btn.BackgroundColor3 = Color3.fromRGB(35, 15, 48) btn.Text = text btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.LayoutOrder = order btn.ZIndex = 12 btn.Active = true btn.Parent = ScrollingFrame
+    btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.LayoutOrder = order btn.ZIndex = 12 btn.Active = true btn.AutoButtonColor = true btn.Parent = ScrollingFrame
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
     local grad = Instance.new("UIGradient") grad.Color = initialActive and ORANGE_ON_GRADIENT or ORANGE_OFF_GRADIENT grad.Rotation = 90 grad.Parent = btn
     local stroke = Instance.new("UIStroke", btn) stroke.Thickness = 1.5 stroke.Color = initialActive and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(100, 45, 120)
@@ -355,7 +356,7 @@ Connections.PlayerHPTracker = RunService.Heartbeat:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- SPEED GUI & RADAR GUI
+-- SPEED GUI
 --------------------------------------------------------------------------------
 local SpeedGui = Instance.new("ScreenGui") SpeedGui.Name = "SharkHubSpeedGui" SpeedGui.ResetOnSpawn = false SpeedGui.DisplayOrder = 105 SpeedGui.Parent = PlayerGui
 local SpeedFrame = Instance.new("Frame") SpeedFrame.Size = UDim2.new(0, 250, 0, 175) SpeedFrame.Position = UDim2.new(0.02, 0, 0.35, 0) SpeedFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) SpeedFrame.Active = true SpeedFrame.ZIndex = 15 SpeedFrame.Parent = SpeedGui Instance.new("UICorner", SpeedFrame).CornerRadius = UDim.new(0, 12)
@@ -387,7 +388,10 @@ local RadarStroke = Instance.new("UIStroke", RadarFrame) RadarStroke.Thickness =
 
 makeDraggable(RadarFrame)
 
-local RadarTitle = Instance.new("TextLabel") RadarTitle.Size = UDim2.new(1, -10, 0, 26) RadarTitle.Position = UDim2.new(0, 10, 0, 4) RadarTitle.BackgroundTransparency = 1 RadarTitle.Text = "🔮 DROP RADAR & RAKOOF HP" RadarTitle.TextColor3 = Color3.fromRGB(255, 140, 0) RadarTitle.Font = Enum.Font.GothamBold RadarTitle.TextSize = 12 RadarTitle.TextXAlignment = Enum.TextXAlignment.Left RadarTitle.ZIndex = 16 RadarTitle.Parent = RadarFrame
+local RadarTitle = Instance.new("TextLabel") RadarTitle.Size = UDim2.new(1, -35, 0, 26) RadarTitle.Position = UDim2.new(0, 10, 0, 4) RadarTitle.BackgroundTransparency = 1 RadarTitle.Text = "🔮 DROP RADAR & RAKOOF HP" RadarTitle.TextColor3 = Color3.fromRGB(255, 140, 0) RadarTitle.Font = Enum.Font.GothamBold RadarTitle.TextSize = 12 RadarTitle.TextXAlignment = Enum.TextXAlignment.Left RadarTitle.ZIndex = 16 RadarTitle.Parent = RadarFrame
+
+local RadarCloseBtn = Instance.new("TextButton") RadarCloseBtn.Size = UDim2.new(0, 20, 0, 20) RadarCloseBtn.Position = UDim2.new(1, -24, 0, 4) RadarCloseBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) RadarCloseBtn.Text = "X" RadarCloseBtn.TextColor3 = Color3.new(1, 1, 1) RadarCloseBtn.Font = Enum.Font.GothamBold RadarCloseBtn.ZIndex = 18 RadarCloseBtn.Parent = RadarFrame Instance.new("UICorner", RadarCloseBtn).CornerRadius = UDim.new(0, 5)
+safeBindClick(RadarCloseBtn, function() RadarFrame.Visible = false end)
 
 local DisplayCard = Instance.new("Frame") DisplayCard.Size = UDim2.new(1, -16, 0, 52) DisplayCard.Position = UDim2.new(0, 8, 0, 32) DisplayCard.BackgroundColor3 = Color3.fromRGB(40, 18, 55) DisplayCard.ZIndex = 16 DisplayCard.Parent = RadarFrame Instance.new("UICorner", DisplayCard).CornerRadius = UDim.new(0, 8)
 local RadarItemName = Instance.new("TextLabel") RadarItemName.Size = UDim2.new(1, -12, 0, 20) RadarItemName.Position = UDim2.new(0, 8, 0, 4) RadarItemName.BackgroundTransparency = 1 RadarItemName.Text = "🎁 Searching drops..." RadarItemName.TextColor3 = Color3.fromRGB(255, 255, 255) RadarItemName.Font = Enum.Font.GothamBold RadarItemName.TextSize = 11 RadarItemName.TextXAlignment = Enum.TextXAlignment.Left RadarItemName.ZIndex = 17 RadarItemName.Parent = DisplayCard
@@ -488,22 +492,23 @@ local FlyBtn, FlyStroke, FlyGrad = CreateStaffButton("🦅 FLY HACK: OFF", 1, fa
 local InfJumpBtn, InfJumpStroke, InfJumpGrad = CreateStaffButton("🦘 INFINITE JUMP LOOP: OFF", 2, false)
 local FullBrightBtn, FullBrightStroke, FullBrightGrad = CreateStaffButton("💡 FULL BRIGHT: OFF", 3, false)
 local TorsoVFXBtn, TorsoVFXStroke, TorsoVFXGrad = CreateStaffButton("🔥 TORSO VFX ATTACHER: OFF", 4, false)
+local StaminaBtn, StaminaStroke, StaminaGrad = CreateStaffButton("⚡ MAX STAMINA: OFF", 5, false)
 
-local BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad = CreateStaffButton("🔥 BRO MAX LUCK 100M%: OFF", 5, false)
-local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 6, false)
-local AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 AUTO TRADE: OFF", 7, false)
-local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 8, false)
-local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 9, false)
-local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 10, false)
-local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 11, false)
-local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 12, false)
-local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 13, false)
-local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 80000%: OFF", 14, false)
-local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 15, false)
-local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 16, false)
-local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 17, false)
-local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 18, false)
-local ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad = CreateStaffButton("🎃 TOGGLE PLAYER HP GUI: ON", 19, true)
+local BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad = CreateStaffButton("🔥 BRO MAX LUCK 100M%: OFF", 6, false)
+local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 7, false)
+local AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 AUTO TRADE: OFF", 8, false)
+local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 9, false)
+local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 10, false)
+local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 11, false)
+local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 12, false)
+local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 13, false)
+local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 14, false)
+local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 80000%: OFF", 15, false)
+local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 16, false)
+local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 17, false)
+local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 18, false)
+local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 19, false)
+local ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad = CreateStaffButton("🎃 TOGGLE PLAYER HP GUI: ON", 20, true)
 
 --------------------------------------------------------------------------------
 -- FEATURE LOGIC IMPLEMENTATIONS
@@ -613,27 +618,187 @@ safeBindClick(TorsoVFXBtn, function()
     end
 end)
 
--- 5. FORCE DROP 80,000%
-safeBindClick(ForceDropBtn, function()
-    Features.ForceDrop = not Features.ForceDrop
-    updateStateUI(ForceDropBtn, ForceDropStroke, ForceDropGrad, Features.ForceDrop, "💥 FORCE DROP 80000%: ON", "💥 FORCE DROP 80000%: OFF")
-    if Connections.ForceDrop then Connections.ForceDrop:Disconnect() Connections.ForceDrop = nil end
-    if Features.ForceDrop then
-        Connections.ForceDrop = RunService.Heartbeat:Connect(function()
-            for _, remote in ipairs(cachedRemotes.LootItem) do pcall(function() remote:FireServer() end) end
-            for _, remote in ipairs(cachedRemotes.SpawnItem) do pcall(function() remote:FireServer() end) end
-            for _, remote in ipairs(cachedRemotes.GiftRain) do pcall(function() remote:FireServer() end) end
+-- 5. MAX STAMINA FEATURE (REMOTE FIRESIGNAL & ATTRIBUTE OVERRIDE LOOP)
+safeBindClick(StaminaBtn, function()
+    Features.MaxStamina = not Features.MaxStamina
+    updateStateUI(StaminaBtn, StaminaStroke, StaminaGrad, Features.MaxStamina, "⚡ MAX STAMINA: ON", "⚡ MAX STAMINA: OFF")
+    
+    if Features.MaxStamina then
+        if Tasks.Stamina then
+            task.cancel(Tasks.Stamina)
+            Tasks.Stamina = nil
+        end
+
+        Tasks.Stamina = task.spawn(function()
+            while Features.MaxStamina do
+                pcall(function()
+                    -- Remote signal trigger
+                    local remotesFolder = ReplicatedStorage:FindFirstChild("PlayerRemotes")
+                    if remotesFolder and remotesFolder:FindFirstChild("SetStaminaValues") and typeof(firesignal) == "function" then
+                        firesignal(remotesFolder.SetStaminaValues.OnClientEvent, 100, 15, 42, 999999)
+                    end
+                    
+                    -- Character & Player Value/Attribute Override
+                    local char = LocalPlayer.Character
+                    if char then
+                        local staminaVal = char:FindFirstChild("Stamina")
+                        if staminaVal then staminaVal.Value = 999999 end
+
+                        local energyVal = char:FindFirstChild("Energy")
+                        if energyVal then energyVal.Value = 999999 end
+
+                        char:SetAttribute("Stamina", 999999)
+                        char:SetAttribute("MaxStamina", 999999)
+                    end
+
+                    if LocalPlayer then
+                        LocalPlayer:SetAttribute("Stamina", 999999)
+                    end
+                end)
+                task.wait(0.2)
+            end
+        end)
+    else
+        if Tasks.Stamina then
+            task.cancel(Tasks.Stamina)
+            Tasks.Stamina = nil
+        end
+    end
+end)
+
+-- 6. BRO MAX LUCK 100M%
+safeBindClick(BroMaxLuckBtn, function()
+    Features.BroMaxLuck = not Features.BroMaxLuck
+    updateStateUI(BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad, Features.BroMaxLuck, "🔥 BRO MAX LUCK 100M%: ON", "🔥 BRO MAX LUCK 100M%: OFF")
+    if Connections.BroMaxLuck then Connections.BroMaxLuck:Disconnect() Connections.BroMaxLuck = nil end
+    if Features.BroMaxLuck then
+        Connections.BroMaxLuck = RunService.Heartbeat:Connect(function()
+            for _, remote in ipairs(cachedRemotes.LootItem) do pcall(function() remote:FireServer(100000000) end) end
+        end)
+        pcall(function() LocalPlayer:SetAttribute("LuckMultiplier", 100000000) end)
+    end
+end)
+
+-- 7. AUTO DISABLE CONE
+safeBindClick(AutoDisableConeBtn, function()
+    Features.AutoDisableCone = not Features.AutoDisableCone
+    updateStateUI(AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad, Features.AutoDisableCone, "🛑 AUTO DISABLE CONE: ON", "🛑 AUTO DISABLE CONE: OFF")
+    if Connections.AutoDisableCone then Connections.AutoDisableCone:Disconnect() Connections.AutoDisableCone = nil end
+    if Features.AutoDisableCone then
+        Connections.AutoDisableCone = RunService.Heartbeat:Connect(function()
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("ConeHandleAdornment") or (obj:IsA("BasePart") and obj.Name:lower():find("cone")) then
+                    pcall(function() obj.Transparency = 1 obj.CanCollide = false end)
+                end
+            end
         end)
     end
 end)
 
--- TOGGLE PLAYER HP GUI
-safeBindClick(ToggleHPGuiBtn, function()
-    HealthFrame.Visible = not HealthFrame.Visible
-    updateStateUI(ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad, HealthFrame.Visible, "🎃 TOGGLE PLAYER HP GUI: ON", "🎃 TOGGLE PLAYER HP GUI: OFF")
+-- 8. AUTO TRADE
+safeBindClick(AutoTradeToggleBtn, function()
+    Features.AutoTrade = not Features.AutoTrade
+    updateStateUI(AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad, Features.AutoTrade, "🤝 AUTO TRADE: ON", "🤝 AUTO TRADE: OFF")
+    if Connections.AutoTrade then Connections.AutoTrade:Disconnect() Connections.AutoTrade = nil end
+    if Features.AutoTrade then
+        Connections.AutoTrade = RunService.Heartbeat:Connect(function()
+            local tradeRemote = ReplicatedStorage:FindFirstChild("TradeRemote", true) or ReplicatedStorage:FindFirstChild("AcceptTrade", true)
+            if tradeRemote and tradeRemote:IsA("RemoteEvent") then
+                pcall(function() tradeRemote:FireServer() end)
+            end
+        end)
+    end
 end)
 
--- AUTO PICKUP
+-- 9. AI BATTLE
+safeBindClick(AIBattleBtn, function()
+    Features.AIBattle = not Features.AIBattle
+    updateStateUI(AIBattleBtn, AIBattleStroke, AIBattleGrad, Features.AIBattle, "🤖 AI BATTLE (Rake): ON", "🤖 AI BATTLE (The_Rake): OFF")
+    if Connections.AIBattle then Connections.AIBattle:Disconnect() Connections.AIBattle = nil end
+    if Features.AIBattle then
+        Connections.AIBattle = RunService.RenderStepped:Connect(function()
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local _, rakePart = findTargetModel(RAKE_NAME)
+            if hrp and rakePart then
+                local angle = tick() * 12
+                hrp.CFrame = CFrame.new(rakePart.Position + Vector3.new(math.cos(angle) * 8, 2, math.sin(angle) * 8), rakePart.Position)
+                executeSpamClick()
+            end
+        end)
+    end
+end)
+
+-- 10. AUTO ATTACK / SPAM CLICKER
+safeBindClick(AutoAttackBtn, function()
+    Features.AutoAttack = not Features.AutoAttack
+    updateStateUI(AutoAttackBtn, AutoAttackStroke, AutoAttackGrad, Features.AutoAttack, "⚔ Spam Clicker: ON", "⚔️ Fast Spam Clicker: OFF")
+    if Connections.Attack then Connections.Attack:Disconnect() Connections.Attack = nil end
+    if Features.AutoAttack then Connections.Attack = RunService.RenderStepped:Connect(executeSpamClick) end
+end)
+
+-- 11. BRING BOSS
+safeBindClick(BringBossBtn, function()
+    Features.BringBoss = not Features.BringBoss
+    updateStateUI(BringBossBtn, BringBossStroke, BringBossGrad, Features.BringBoss, "🧲 Bring Boss: ON", "🧲 Bring Boss To Player: OFF")
+    if Connections.BringBoss then Connections.BringBoss:Disconnect() Connections.BringBoss = nil end
+    if Features.BringBoss then
+        Connections.BringBoss = RunService.Heartbeat:Connect(function()
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local _, targetPart = findTargetModel(RAKE_NAME)
+            if hrp and targetPart then targetPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -3) end
+        end)
+    end
+end)
+
+-- 12. EXPAND HITBOX
+safeBindClick(HitboxBtn, function()
+    Features.ExpandHitbox = not Features.ExpandHitbox
+    updateStateUI(HitboxBtn, HitboxStroke, HitboxGrad, Features.ExpandHitbox, "📦 Expand Hitbox: ON", "📦 Expand Target Hitbox: OFF")
+    if Connections.Hitbox then Connections.Hitbox:Disconnect() Connections.Hitbox = nil end
+    if Features.ExpandHitbox then
+        Connections.Hitbox = RunService.Heartbeat:Connect(function()
+            local _, targetPart = findTargetModel(RAKE_NAME)
+            if not targetPart then _, targetPart = findTargetModel(TARGET_NAME) end
+            if targetPart then
+                pcall(function()
+                    targetPart.Size = Vector3.new(15, 15, 15)
+                    targetPart.Transparency = 0.7
+                    targetPart.BrickColor = BrickColor.new("Bright orange")
+                    targetPart.CanCollide = false
+                end)
+            end
+        end)
+    else
+        local _, targetPart = findTargetModel(RAKE_NAME)
+        if not targetPart then _, targetPart = findTargetModel(TARGET_NAME) end
+        if targetPart then
+            pcall(function()
+                targetPart.Size = Vector3.new(2, 2, 1)
+                targetPart.Transparency = 0
+            end)
+        end
+    end
+end)
+
+-- 13. TRIGGER BOT
+safeBindClick(TriggerBotBtn, function()
+    Features.TriggerBot = not Features.TriggerBot
+    updateStateUI(TriggerBotBtn, TriggerBotStroke, TriggerBotGrad, Features.TriggerBot, "🎯 Trigger Bot: ON", "🎯 Trigger Bot: OFF")
+    if Connections.TriggerBot then Connections.TriggerBot:Disconnect() Connections.TriggerBot = nil end
+    if Features.TriggerBot then
+        Connections.TriggerBot = RunService.RenderStepped:Connect(function()
+            local mouse = LocalPlayer:GetMouse()
+            if mouse and mouse.Target then
+                local model = mouse.Target:FindFirstAncestorOfClass("Model")
+                if model and (model.Name:lower():find(RAKE_NAME) or model.Name:lower():find(TARGET_NAME)) then
+                    executeSpamClick()
+                end
+            end
+        end)
+    end
+end)
+
+-- 14. AUTO PICKUP
 safeBindClick(AutoPickupBtn, function()
     Features.AutoPickup = not Features.AutoPickup
     updateStateUI(AutoPickupBtn, AutoPickupStroke, AutoPickupGrad, Features.AutoPickup, "🎁 Auto Pickup: ON", "🎁 Golden Staff Auto Pickup: OFF")
@@ -654,47 +819,53 @@ safeBindClick(AutoPickupBtn, function()
     end
 end)
 
--- AUTO ATTACK / SPAM CLICKER
-safeBindClick(AutoAttackBtn, function()
-    Features.AutoAttack = not Features.AutoAttack
-    updateStateUI(AutoAttackBtn, AutoAttackStroke, AutoAttackGrad, Features.AutoAttack, "⚔ Spam Clicker: ON", "⚔️ Fast Spam Clicker: OFF")
-    if Connections.Attack then Connections.Attack:Disconnect() Connections.Attack = nil end
-    if Features.AutoAttack then Connections.Attack = RunService.RenderStepped:Connect(executeSpamClick) end
+-- 15. FORCE DROP 80,000%
+safeBindClick(ForceDropBtn, function()
+    Features.ForceDrop = not Features.ForceDrop
+    updateStateUI(ForceDropBtn, ForceDropStroke, ForceDropGrad, Features.ForceDrop, "💥 FORCE DROP 80000%: ON", "💥 FORCE DROP 80000%: OFF")
+    if Connections.ForceDrop then Connections.ForceDrop:Disconnect() Connections.ForceDrop = nil end
+    if Features.ForceDrop then
+        Connections.ForceDrop = RunService.Heartbeat:Connect(function()
+            for _, remote in ipairs(cachedRemotes.LootItem) do pcall(function() remote:FireServer() end) end
+            for _, remote in ipairs(cachedRemotes.SpawnItem) do pcall(function() remote:FireServer() end) end
+            for _, remote in ipairs(cachedRemotes.GiftRain) do pcall(function() remote:FireServer() end) end
+        end)
+    end
 end)
 
--- AI BATTLE
-safeBindClick(AIBattleBtn, function()
-    Features.AIBattle = not Features.AIBattle
-    updateStateUI(AIBattleBtn, AIBattleStroke, AIBattleGrad, Features.AIBattle, "🤖 AI BATTLE (Rake): ON", "🤖 AI BATTLE (The_Rake): OFF")
-    if Connections.AIBattle then Connections.AIBattle:Disconnect() Connections.AIBattle = nil end
-    if Features.AIBattle then
-        Connections.AIBattle = RunService.RenderStepped:Connect(function()
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local _, rakePart = findTargetModel(RAKE_NAME)
-            if hrp and rakePart then
-                local angle = tick() * 12
-                hrp.CFrame = CFrame.new(rakePart.Position + Vector3.new(math.cos(angle) * 8, 2, math.sin(angle) * 8), rakePart.Position)
-                executeSpamClick()
+-- 16. 250% WORLD LUCK
+safeBindClick(Luck250Btn, function()
+    Features.Luck250 = not Features.Luck250
+    updateStateUI(Luck250Btn, Luck250Stroke, Luck250Grad, Features.Luck250, "🍀 250% WORLD LUCK: ON", "🍀 250% WORLD LUCK: OFF")
+    pcall(function() LocalPlayer:SetAttribute("WorldLuck", Features.Luck250 and 2.5 or 1) end)
+end)
+
+-- 17. 1000% WORLD LUCK
+safeBindClick(Luck1000Btn, function()
+    Features.Luck1000 = not Features.Luck1000
+    updateStateUI(Luck1000Btn, Luck1000Stroke, Luck1000Grad, Features.Luck1000, "⚡ 1000% WORLD LUCK: ON", "⚡ 1000% WORLD LUCK: OFF")
+    pcall(function() LocalPlayer:SetAttribute("WorldLuck", Features.Luck1000 and 10 or 1) end)
+end)
+
+-- 18. AUTO ESCAPE (20% HP)
+safeBindClick(AutoEscapeBtn, function()
+    Features.AutoEscape = not Features.AutoEscape
+    updateStateUI(AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad, Features.AutoEscape, "🚨 Auto Escape: ON", "🚨 Auto Escape (20% HP): OFF")
+    if Connections.AutoEscape then Connections.AutoEscape:Disconnect() Connections.AutoEscape = nil end
+    if Features.AutoEscape then
+        Connections.AutoEscape = RunService.Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hum and hrp and hum.MaxHealth > 0 and (hum.Health / hum.MaxHealth) <= 0.20 then
+                hrp.CFrame = hrp.CFrame + Vector3.new(0, 100, 0)
+                task.wait(1)
             end
         end)
     end
 end)
 
--- BRING BOSS
-safeBindClick(BringBossBtn, function()
-    Features.BringBoss = not Features.BringBoss
-    updateStateUI(BringBossBtn, BringBossStroke, BringBossGrad, Features.BringBoss, "🧲 Bring Boss: ON", "🧲 Bring Boss To Player: OFF")
-    if Connections.BringBoss then Connections.BringBoss:Disconnect() Connections.BringBoss = nil end
-    if Features.BringBoss then
-        Connections.BringBoss = RunService.Heartbeat:Connect(function()
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local _, targetPart = findTargetModel(RAKE_NAME)
-            if hrp and targetPart then targetPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -3) end
-        end)
-    end
-end)
-
--- BRING RAKOOF
+-- 19. BRING RAKOOF
 safeBindClick(BringRakoofBtn, function()
     Features.BringRakoof = not Features.BringRakoof
     updateStateUI(BringRakoofBtn, BringRakoofStroke, BringRakoofGrad, Features.BringRakoof, "🧲 Bring Rakoof: ON", "🧲 Bring Rakoof: OFF")
@@ -706,6 +877,12 @@ safeBindClick(BringRakoofBtn, function()
             if hrp and targetPart then targetPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -3) end
         end)
     end
+end)
+
+-- 20. TOGGLE PLAYER HP GUI
+safeBindClick(ToggleHPGuiBtn, function()
+    HealthFrame.Visible = not HealthFrame.Visible
+    updateStateUI(ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad, HealthFrame.Visible, "🎃 TOGGLE PLAYER HP GUI: ON", "🎃 TOGGLE PLAYER HP GUI: OFF")
 end)
 
 -- TOGGLE HUB VISIBILITY
