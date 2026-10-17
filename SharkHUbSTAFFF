@@ -1,4 +1,4 @@
--- SharkHub V5.0 | Halloween Spooky Edition 🎃👻 Complete Script[cite: 15]
+-- SharkHub V5.0 | Halloween Spooky Edition 🎃👻 Complete Script
 
 if getgenv().SharkHubCleanup then
     pcall(getgenv().SharkHubCleanup)
