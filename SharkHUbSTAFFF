@@ -510,9 +510,41 @@ local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 
 local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 19, false)
 local ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad = CreateStaffButton("🎃 TOGGLE PLAYER HP GUI: ON", 20, true)
 
+-- CANDY PICKER-UPPER TELEPORT BUTTON
+local CandyTpBtn, CandyTpStroke, CandyTpGrad = CreateStaffButton("🍬 TP TO CANDYCONES/PACKS", 21, false)
+
 --------------------------------------------------------------------------------
 -- FEATURE LOGIC IMPLEMENTATIONS
 --------------------------------------------------------------------------------
+
+-- CANDY CONE / PACK TELEPORT BUTTON LOGIC
+safeBindClick(CandyTpBtn, function()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local targetPart = nil
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") or obj:IsA("BasePart") then
+            local nameLower = obj.Name:lower()
+            if nameLower:find("candycone") or nameLower:find("candypack") or nameLower:find("candy_cone") or nameLower:find("candy_pack") then
+                targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+                if targetPart then break end
+            end
+        end
+    end
+
+    if targetPart then
+        hrp.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+        CandyTpBtn.Text = "✅ TELEPORTED TO CANDY!"
+    else
+        CandyTpBtn.Text = "⚠️ NO CANDYCONES/PACKS FOUND"
+    end
+
+    task.delay(1.5, function()
+        CandyTpBtn.Text = "🍬 TP TO CANDYCONES/PACKS"
+    end)
+end)
 
 -- 1. FLY FEATURE
 local flyBodyVel, flyBodyGyro
