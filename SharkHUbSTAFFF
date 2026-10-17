@@ -1,8 +1,4 @@
--- SharkHub V5.0 | Halloween Spooky Edition 🎃👻 Complete Script
-
-if getgenv().SharkHubCleanup then
-    pcall(getgenv().SharkHubCleanup)
-end
+-- SharkHub V5.0 | Halloween Spooky Edition 🎃👻 Complete Script with Bypass & Key System
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -11,923 +7,572 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
-local VirtualUser = pcall(function() return game:GetService("VirtualUser") end) and game:GetService("VirtualUser") or nil
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local ParentGui = (pcall(function() return gethui() end) and gethui()) or CoreGui
 
 --------------------------------------------------------------------------------
--- UNIVERSAL DRAGGABLE HELPER
+-- BYPASS / WHITELIST CHECK
 --------------------------------------------------------------------------------
-local function makeDraggable(guiFrame, dragHandle)
-    dragHandle = dragHandle or guiFrame
-    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
-    
-    dragHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = guiFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
+local ALLOWED_USER_ID = 9603761866
+local ALLOWED_USERNAME = "trebtrebalt3"
 
-    dragHandle.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            guiFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
+local isWhitelisted = (LocalPlayer.UserId == ALLOWED_USER_ID) or (LocalPlayer.Name:lower() == ALLOWED_USERNAME:lower())
 
 --------------------------------------------------------------------------------
--- TARGET LISTS & CONFIG
+-- SICK HALLOWEEN LOADING & KEY SYSTEM GUI
 --------------------------------------------------------------------------------
-local TARGET_ITEMS_LIST = {
-    "GoldenApple", "LegendaryEnergy", "IgnitionFlame", 
-    "SnowFlakes", "CorruptedHalo", "StrangeBar", "BurnedBone",
-    "Penguin", "PenguinPart", "PenguinParts", "Mesh", "Meshes",
-    "CrucibleSword", "Imposta", "NullBlock", "TrainerCap", "SlashProjectile2"
-}
+local KeySystemGui = Instance.new("ScreenGui")
+KeySystemGui.Name = "SharkHubKeySystem"
+KeySystemGui.ResetOnSpawn = false
+KeySystemGui.DisplayOrder = 999
+KeySystemGui.Parent = ParentGui
 
-local TARGET_ITEMS_LOOKUP = {}
-for _, item in ipairs(TARGET_ITEMS_LIST) do TARGET_ITEMS_LOOKUP[item:lower()] = true end
+-- Loading Screen Frame
+local LoadFrame = Instance.new("Frame")
+LoadFrame.Size = UDim2.new(0, 420, 0, 220)
+LoadFrame.Position = UDim2.new(0.5, -210, 0.5, -110)
+LoadFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
+LoadFrame.ZIndex = 300
+LoadFrame.Parent = KeySystemGui
+Instance.new("UICorner", LoadFrame).CornerRadius = UDim.new(0, 16)
+local LoadStroke = Instance.new("UIStroke", LoadFrame)
+LoadStroke.Thickness = 2.5
+LoadStroke.Color = Color3.fromRGB(255, 110, 0)
 
-local ITEM_PROBABILITIES = {
-    ["cruciblesword"] = "3%", ["corruptedhalo"] = "5%", ["ignitionflame"] = "8%",
-    ["legendaryenergy"] = "10%", ["goldenapple"] = "15%", ["strangebar"] = "20%",
-    ["burnedbone"] = "25%", ["nullblock"] = "30%", ["default"] = "40%"
-}
+local LoadTitle = Instance.new("TextLabel")
+LoadTitle.Size = UDim2.new(1, 0, 0, 40)
+LoadTitle.Position = UDim2.new(0, 0, 0, 15)
+LoadTitle.BackgroundTransparency = 1
+LoadTitle.Text = "🎃 SHARK HUB V5 — LOADING... 👻"
+LoadTitle.TextColor3 = Color3.fromRGB(255, 140, 0)
+LoadTitle.Font = Enum.Font.GothamBold
+LoadTitle.TextSize = 14
+LoadTitle.ZIndex = 301
+LoadTitle.Parent = LoadFrame
 
-local RAKE_NAME = "the_rake"
-local TARGET_NAME = "doofmmy"
-local TOGGLE_KEY = Enum.KeyCode.RightControl
+local LoadBarBg = Instance.new("Frame")
+LoadBarBg.Size = UDim2.new(0.85, 0, 0, 18)
+LoadBarBg.Position = UDim2.new(0.075, 0, 0.45, 0)
+LoadBarBg.BackgroundColor3 = Color3.fromRGB(40, 15, 50)
+LoadBarBg.ZIndex = 301
+LoadBarBg.Parent = LoadFrame
+Instance.new("UICorner", LoadBarBg).CornerRadius = UDim.new(0, 6)
 
-local Features = {
-    BroMaxLuck = false, AutoDisableCone = false, AutoTrade = false,
-    AIBattle = false, AutoAttack = false, BringBoss = false, ExpandHitbox = false,
-    AutoPickup = false, TriggerBot = false, AutoEscape = false,
-    BringRakoof = false, ForceDrop = false, UseWhitelist = true,
-    Luck250 = false, Luck500 = false, Luck750 = false, Luck1000 = false,
-    Fly = false, InfJump = false, FullBright = false, TorsoVFX = false,
-    MaxStamina = false
-}
+local LoadBarFill = Instance.new("Frame")
+LoadBarFill.Size = UDim2.new(0, 0, 1, 0)
+LoadBarFill.BackgroundColor3 = Color3.fromRGB(255, 110, 0)
+LoadBarFill.ZIndex = 302
+LoadBarFill.Parent = LoadBarBg
+Instance.new("UICorner", LoadBarFill).CornerRadius = UDim.new(0, 6)
 
-local Connections, Tasks = {}, {}
-local currentSetSpeed = nil
+local LoadStatus = Instance.new("TextLabel")
+LoadStatus.Size = UDim2.new(1, 0, 0, 30)
+LoadStatus.Position = UDim2.new(0, 0, 0.65, 0)
+LoadStatus.BackgroundTransparency = 1
+LoadStatus.Text = "Initializing Spooky Modules..."
+LoadStatus.TextColor3 = Color3.fromRGB(255, 200, 120)
+LoadStatus.Font = Enum.Font.Gotham
+LoadStatus.TextSize = 12
+LoadStatus.ZIndex = 301
+LoadStatus.Parent = LoadFrame
 
-local OrigLighting = {
-    Ambient = Lighting.Ambient,
-    OutdoorAmbient = Lighting.OutdoorAmbient,
-    Brightness = Lighting.Brightness,
-    ClockTime = Lighting.ClockTime,
-    GlobalShadows = Lighting.GlobalShadows
-}
+-- Run Loading Bar Animation
+TweenService:Create(LoadBarFill, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+task.wait(0.4)
+LoadStatus.Text = "Checking Whitelist & Bypass..."
+task.wait(0.6)
 
-getgenv().SharkHubCleanup = function()
-    for _, conn in pairs(Connections) do if conn then conn:Disconnect() end end
-    for _, taskRef in pairs(Tasks) do if taskRef then pcall(task.cancel, taskRef) end end
-    table.clear(Connections)
-    table.clear(Tasks)
-    if Features.FullBright then
-        Lighting.Ambient = OrigLighting.Ambient
-        Lighting.OutdoorAmbient = OrigLighting.OutdoorAmbient
-        Lighting.Brightness = OrigLighting.Brightness
-        Lighting.ClockTime = OrigLighting.ClockTime
-        Lighting.GlobalShadows = OrigLighting.GlobalShadows
-    end
-    if PlayerGui:FindFirstChild("SharkHubStaffGui") then PlayerGui.SharkHubStaffGui:Destroy() end
-    if PlayerGui:FindFirstChild("SharkHubSpeedGui") then PlayerGui.SharkHubSpeedGui:Destroy() end
-    if PlayerGui:FindFirstChild("SharkHubPlayerHPGui") then PlayerGui.SharkHubPlayerHPGui:Destroy() end
-end
+-- Check Whitelist Bypass
+if isWhitelisted then
+    LoadStatus.Text = "✨ WHITELIST DETECTED! BYPASSING KEY..."
+    task.wait(0.6)
+    KeySystemGui:Destroy()
+    pcall(function() loadHubMain() end)
+else
+    LoadStatus.Text = "Ready for Authentication!"
+    task.wait(0.3)
 
---------------------------------------------------------------------------------
--- HALLOWEEN THEME GRADIENTS
---------------------------------------------------------------------------------
-local ORANGE_OFF_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 25, 5)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(95, 40, 10)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 20, 0))
-})
-local ORANGE_ON_GRADIENT = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 110, 0)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 160, 30)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 80, 0))
-})
+    -- Key Input Frame (Shows only if NOT whitelisted)
+    local KeyFrame = Instance.new("Frame")
+    KeyFrame.Size = UDim2.new(0, 460, 0, 240)
+    KeyFrame.Position = UDim2.new(0.5, -230, 0.5, -120)
+    KeyFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
+    KeyFrame.ZIndex = 300
+    KeyFrame.Parent = KeySystemGui
+    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 16)
+    local KeyStroke = Instance.new("UIStroke", KeyFrame)
+    KeyStroke.Thickness = 2.5
+    KeyStroke.Color = Color3.fromRGB(255, 110, 0)
 
---------------------------------------------------------------------------------
--- EXPLOIT HELPERS
---------------------------------------------------------------------------------
-local function safeTouchInterest(part1, part2)
-    if typeof(firetouchinterest) == "function" then
-        pcall(function() firetouchinterest(part1, part2, 0) firetouchinterest(part1, part2, 1) end)
-    else
-        pcall(function() if not part2.Anchored then part2.CFrame = part1.CFrame end end)
-    end
-end
+    local KeyTitle = Instance.new("TextLabel")
+    KeyTitle.Size = UDim2.new(1, 0, 0, 45)
+    KeyTitle.Position = UDim2.new(0, 0, 0, 10)
+    KeyTitle.BackgroundTransparency = 1
+    KeyTitle.Text = "🔐 SHARK HUB V5 — KEY REQUIRED 🔑"
+    KeyTitle.TextColor3 = Color3.fromRGB(255, 140, 0)
+    KeyTitle.Font = Enum.Font.GothamBold
+    KeyTitle.TextSize = 15
+    KeyTitle.ZIndex = 301
+    KeyTitle.Parent = KeyFrame
 
-local function executeSpamClick()
-    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
-    if tool then
-        pcall(function() tool:Activate() end)
-    elseif VirtualUser then
-        pcall(function()
-            VirtualUser:Button1Down(Vector2.zero, Workspace.CurrentCamera.CFrame)
-            VirtualUser:Button1Up(Vector2.zero, Workspace.CurrentCamera.CFrame)
-        end)
-    end
-end
+    local KeyInputBox = Instance.new("TextBox")
+    KeyInputBox.Size = UDim2.new(0.88, 0, 0, 42)
+    KeyInputBox.Position = UDim2.new(0.06, 0, 0.32, 0)
+    KeyInputBox.BackgroundColor3 = Color3.fromRGB(35, 15, 48)
+    KeyInputBox.PlaceholderText = "Paste your license key here..."
+    KeyInputBox.Text = ""
+    KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyInputBox.PlaceholderColor3 = Color3.fromRGB(150, 100, 170)
+    KeyInputBox.Font = Enum.Font.GothamBold
+    KeyInputBox.TextSize = 11
+    KeyInputBox.ClearTextOnFocus = false
+    KeyInputBox.ZIndex = 301
+    KeyInputBox.Parent = KeyFrame
+    Instance.new("UICorner", KeyInputBox).CornerRadius = UDim.new(0, 8)
 
-local cachedRemotes = { GiftRain = {}, LootItem = {}, SpawnItem = {} }
-local function updateRemoteCache()
-    table.clear(cachedRemotes.GiftRain)
-    table.clear(cachedRemotes.LootItem)
-    table.clear(cachedRemotes.SpawnItem)
-    local search = ReplicatedStorage:FindFirstChild("Remotes") or ReplicatedStorage
-    for _, obj in ipairs(search:GetDescendants()) do
-        if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") or obj:IsA("BindableEvent") then
-            local n = obj.Name:lower()
-            if n:find("giftrain") then table.insert(cachedRemotes.GiftRain, obj)
-            elseif n:find("lootitem") and not n:find("player") then table.insert(cachedRemotes.LootItem, obj)
-            elseif n:find("spawnitem") then table.insert(cachedRemotes.SpawnItem, obj) end
-        end
-    end
-end
-updateRemoteCache()
+    local SubmitKeyBtn = Instance.new("TextButton")
+    SubmitKeyBtn.Size = UDim2.new(0.88, 0, 0, 44)
+    SubmitKeyBtn.Position = UDim2.new(0.06, 0, 0.58, 0)
+    SubmitKeyBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0)
+    SubmitKeyBtn.Text = "🚀 UNLOCK SHARK HUB"
+    SubmitKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SubmitKeyBtn.Font = Enum.Font.GothamBold
+    SubmitKeyBtn.TextSize = 13
+    SubmitKeyBtn.ZIndex = 301
+    SubmitKeyBtn.Parent = KeyFrame
+    Instance.new("UICorner", SubmitKeyBtn).CornerRadius = UDim.new(0, 8)
 
-local function findTargetModel(query)
-    local qLower = query:lower()
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        if obj:IsA("Model") and obj.Name:lower():find(qLower) then
-            local p = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj:FindFirstChildWhichIsA("BasePart")
-            if p then return obj, p end
-        end
-    end
-    return nil, nil
-end
+    local KeyErrorLabel = Instance.new("TextLabel")
+    KeyErrorLabel.Size = UDim2.new(1, 0, 0, 24)
+    KeyErrorLabel.Position = UDim2.new(0, 0, 0.82, 0)
+    KeyErrorLabel.BackgroundTransparency = 1
+    KeyErrorLabel.Text = "⚠️ Access restricted without valid key."
+    KeyErrorLabel.TextColor3 = Color3.fromRGB(220, 50, 50)
+    KeyErrorLabel.Font = Enum.Font.GothamBold
+    KeyErrorLabel.TextSize = 11
+    KeyErrorLabel.ZIndex = 301
+    KeyErrorLabel.Parent = KeyFrame
 
-local function isWhitelistedItem(name)
-    local nameLower = name:lower()
-    for key, _ in pairs(TARGET_ITEMS_LOOKUP) do
-        if nameLower:find(key) then return true end
-    end
-    return false
-end
+    LoadFrame.Visible = false
+    KeyFrame.Visible = true
 
-local function getDropContainers()
-    local containers = {}
-    local rsDrops = ReplicatedStorage:FindFirstChild("Drops")
-    if rsDrops then table.insert(containers, rsDrops) end
-    table.insert(containers, ReplicatedStorage)
-    local wsDrops = Workspace:FindFirstChild("Drops")
-    if wsDrops then table.insert(containers, wsDrops) end
-    table.insert(containers, Workspace)
-    return containers
-end
+    local CorrectKey = "FN DJSFI*&^$&YIUNFJDSF$#@FDSFEFSDFDSFEP@I#$HJUF!*&@#!@#YNSD AKJNGDASBDHASBDHABDHBSADHABSHD"
+    local Verified = false
 
-local function safeBindClick(button, callback)
-    button.Activated:Connect(function()
-        pcall(callback)
-    end)
-end
-
---------------------------------------------------------------------------------
--- MAIN HALLOWEEN GUI
---------------------------------------------------------------------------------
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SharkHubStaffGui"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.DisplayOrder = 100
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = PlayerGui
-
--- Toggle Icon (Spooky Pumpkin)
-local ToggleIcon = Instance.new("TextButton")
-ToggleIcon.Size = UDim2.new(0, 52, 0, 52)
-ToggleIcon.Position = UDim2.new(0, 20, 0.5, -26)
-ToggleIcon.BackgroundColor3 = Color3.fromRGB(35, 12, 45)
-ToggleIcon.Text = "🎃"
-ToggleIcon.TextSize = 30
-ToggleIcon.ZIndex = 200
-ToggleIcon.Active = true
-ToggleIcon.Parent = ScreenGui
-Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(0, 16)
-local IconStroke = Instance.new("UIStroke", ToggleIcon) IconStroke.Thickness = 2 IconStroke.Color = Color3.fromRGB(255, 120, 0)
-
-makeDraggable(ToggleIcon)
-
--- Main Frame
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 760, 0, 500)
-MainFrame.Position = UDim2.new(0.5, -380, 0.5, -250)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
-MainFrame.ClipsDescendants = false
-MainFrame.Active = true
-MainFrame.ZIndex = 10
-MainFrame.Parent = ScreenGui
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
-local MainStroke = Instance.new("UIStroke", MainFrame) MainStroke.Thickness = 2.5 MainStroke.Color = Color3.fromRGB(255, 110, 0)
-
-local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 54)
-TitleBar.BackgroundColor3 = Color3.fromRGB(32, 14, 46)
-TitleBar.ZIndex = 11
-TitleBar.Active = true
-TitleBar.Parent = MainFrame
-Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 16)
-
-makeDraggable(MainFrame, TitleBar)
-
-local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(0.65, 0, 1, 0) TitleText.Position = UDim2.new(0, 18, 0, 0) TitleText.BackgroundTransparency = 1
-TitleText.Text = "🎃 SHARK HUB V5 — HALLOWEEN SPOOKY HUB 👻" TitleText.TextColor3 = Color3.fromRGB(255, 140, 0)
-TitleText.Font = Enum.Font.GothamBold TitleText.TextSize = 15 TitleText.TextXAlignment = Enum.TextXAlignment.Left TitleText.ZIndex = 12 TitleText.Parent = TitleBar
-
-local MinimizeBtn = Instance.new("TextButton") MinimizeBtn.Size = UDim2.new(0, 32, 0, 32) MinimizeBtn.Position = UDim2.new(1, -82, 0.5, -16)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) MinimizeBtn.Text = "-" MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) MinimizeBtn.Font = Enum.Font.GothamBold MinimizeBtn.ZIndex = 13 MinimizeBtn.Active = true MinimizeBtn.Parent = TitleBar
-Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 8)
-
-local CloseBtn = Instance.new("TextButton") CloseBtn.Size = UDim2.new(0, 32, 0, 32) CloseBtn.Position = UDim2.new(1, -44, 0.5, -16)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40) CloseBtn.Text = "X" CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255) CloseBtn.Font = Enum.Font.GothamBold CloseBtn.ZIndex = 13 CloseBtn.Active = true CloseBtn.Parent = TitleBar
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
-
-local ScrollingFrame = Instance.new("ScrollingFrame")
-ScrollingFrame.Size = UDim2.new(1, -24, 1, -70) ScrollingFrame.Position = UDim2.new(0, 12, 0, 60)
-ScrollingFrame.BackgroundTransparency = 1 ScrollingFrame.ScrollBarThickness = 6 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 120, 0)
-ScrollingFrame.ZIndex = 11 ScrollingFrame.Active = true ScrollingFrame.Selectable = true ScrollingFrame.ClipsDescendants = true ScrollingFrame.Parent = MainFrame
-
-safeBindClick(MinimizeBtn, function()
-    ScrollingFrame.Visible = not ScrollingFrame.Visible
-    MainFrame.Size = ScrollingFrame.Visible and UDim2.new(0, 760, 0, 500) or UDim2.new(0, 760, 0, 54)
-    MinimizeBtn.Text = ScrollingFrame.Visible and "-" or "+"
-end)
-safeBindClick(CloseBtn, function() MainFrame.Visible = false end)
-
-local UIGridLayout = Instance.new("UIGridLayout")
-UIGridLayout.CellSize = UDim2.new(0.485, 0, 0, 44) UIGridLayout.CellPadding = UDim2.new(0.03, 0, 0, 10)
-UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder UIGridLayout.Parent = ScrollingFrame
-UIGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIGridLayout.AbsoluteContentSize.Y + 40)
-end)
-
-local function CreateStaffButton(text, order, initialActive)
-    local btn = Instance.new("TextButton")
-    btn.BackgroundColor3 = Color3.fromRGB(35, 15, 48) btn.Text = text btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.LayoutOrder = order btn.ZIndex = 12 btn.Active = true btn.AutoButtonColor = true btn.Parent = ScrollingFrame
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
-    local grad = Instance.new("UIGradient") grad.Color = initialActive and ORANGE_ON_GRADIENT or ORANGE_OFF_GRADIENT grad.Rotation = 90 grad.Parent = btn
-    local stroke = Instance.new("UIStroke", btn) stroke.Thickness = 1.5 stroke.Color = initialActive and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(100, 45, 120)
-    return btn, stroke, grad
-end
-
-local function updateStateUI(btn, stroke, grad, state, textOn, textOff)
-    btn.Text = state and textOn or textOff
-    grad.Color = state and ORANGE_ON_GRADIENT or ORANGE_OFF_GRADIENT
-    stroke.Color = state and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(100, 45, 120)
-end
-
---------------------------------------------------------------------------------
--- PLAYER HEALTH BAR GUI
---------------------------------------------------------------------------------
-local HealthGui = Instance.new("ScreenGui")
-HealthGui.Name = "SharkHubPlayerHPGui"
-HealthGui.ResetOnSpawn = false
-HealthGui.DisplayOrder = 110
-HealthGui.Parent = PlayerGui
-
-local HealthFrame = Instance.new("Frame")
-HealthFrame.Size = UDim2.new(0, 260, 0, 85)
-HealthFrame.Position = UDim2.new(0.02, 0, 0.72, 0)
-HealthFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
-HealthFrame.Active = true
-HealthFrame.ZIndex = 20
-HealthFrame.Parent = HealthGui
-Instance.new("UICorner", HealthFrame).CornerRadius = UDim.new(0, 12)
-local HPFrameStroke = Instance.new("UIStroke", HealthFrame) HPFrameStroke.Thickness = 2 HPFrameStroke.Color = Color3.fromRGB(255, 110, 0)
-
-makeDraggable(HealthFrame)
-
-local HPHeader = Instance.new("Frame") HPHeader.Size = UDim2.new(1, 0, 0, 26) HPHeader.BackgroundTransparency = 1 HPHeader.ZIndex = 21 HPHeader.Parent = HealthFrame
-local HPTitle = Instance.new("TextLabel") HPTitle.Size = UDim2.new(0.7, 0, 1, 0) HPTitle.Position = UDim2.new(0, 10, 0, 0) HPTitle.BackgroundTransparency = 1
-HPTitle.Text = "🎃 PLAYER HEALTH" HPTitle.TextColor3 = Color3.fromRGB(255, 140, 0) HPTitle.Font = Enum.Font.GothamBold HPTitle.TextSize = 12 HPTitle.TextXAlignment = Enum.TextXAlignment.Left HPTitle.ZIndex = 21 HPTitle.Parent = HPHeader
-
-local HPMinBtn = Instance.new("TextButton") HPMinBtn.Size = UDim2.new(0, 20, 0, 20) HPMinBtn.Position = UDim2.new(1, -48, 0, 3) HPMinBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 0) HPMinBtn.Text = "-" HPMinBtn.TextColor3 = Color3.new(1,1,1) HPMinBtn.Font = Enum.Font.GothamBold HPMinBtn.ZIndex = 22 HPMinBtn.Active = true HPMinBtn.Parent = HPHeader Instance.new("UICorner", HPMinBtn).CornerRadius = UDim.new(0, 5)
-local HPCloseBtn = Instance.new("TextButton") HPCloseBtn.Size = UDim2.new(0, 20, 0, 20) HPCloseBtn.Position = UDim2.new(1, -24, 0, 3) HPCloseBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) HPCloseBtn.Text = "X" HPCloseBtn.TextColor3 = Color3.new(1,1,1) HPCloseBtn.Font = Enum.Font.GothamBold HPCloseBtn.ZIndex = 22 HPCloseBtn.Active = true HPCloseBtn.Parent = HPHeader Instance.new("UICorner", HPCloseBtn).CornerRadius = UDim.new(0, 5)
-
-local HPContainer = Instance.new("Frame") HPContainer.Size = UDim2.new(1, -20, 0, 42) HPContainer.Position = UDim2.new(0, 10, 0, 32) HPContainer.BackgroundTransparency = 1 HPContainer.ZIndex = 21 HPContainer.Parent = HealthFrame
-
-local HPBarBg = Instance.new("Frame") HPBarBg.Size = UDim2.new(1, 0, 0, 20) HPBarBg.Position = UDim2.new(0, 0, 0, 0) HPBarBg.BackgroundColor3 = Color3.fromRGB(40, 15, 50) HPBarBg.ZIndex = 21 HPBarBg.Parent = HPContainer Instance.new("UICorner", HPBarBg).CornerRadius = UDim.new(0, 6)
-local HPBarFill = Instance.new("Frame") HPBarFill.Size = UDim2.new(1, 0, 1, 0) HPBarFill.BackgroundColor3 = Color3.fromRGB(255, 110, 0) HPBarFill.ZIndex = 22 HPBarFill.Parent = HPBarBg Instance.new("UICorner", HPBarFill).CornerRadius = UDim.new(0, 6)
-local HPFillGrad = Instance.new("UIGradient") HPFillGrad.Color = ORANGE_ON_GRADIENT HPFillGrad.Parent = HPBarFill
-
-local HPTextLabel = Instance.new("TextLabel") HPTextLabel.Size = UDim2.new(1, 0, 0, 18) HPTextLabel.Position = UDim2.new(0, 0, 0, 22) HPTextLabel.BackgroundTransparency = 1
-HPTextLabel.Text = "100 / 100 HP (100%)" HPTextLabel.TextColor3 = Color3.fromRGB(255, 200, 120) HPTextLabel.Font = Enum.Font.GothamBold HPTextLabel.TextSize = 11 HPTextLabel.ZIndex = 22 HPTextLabel.Parent = HPContainer
-
-safeBindClick(HPMinBtn, function()
-    HPContainer.Visible = not HPContainer.Visible
-    HealthFrame.Size = HPContainer.Visible and UDim2.new(0, 260, 0, 85) or UDim2.new(0, 260, 0, 28)
-    HPMinBtn.Text = HPContainer.Visible and "-" or "+"
-end)
-safeBindClick(HPCloseBtn, function() HealthFrame.Visible = false end)
-
-Connections.PlayerHPTracker = RunService.Heartbeat:Connect(function()
-    if HealthFrame.Visible and HPContainer.Visible then
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            local currentHP = math.clamp(hum.Health, 0, hum.MaxHealth)
-            local ratio = math.clamp(currentHP / math.max(hum.MaxHealth, 1), 0, 1)
-            TweenService:Create(HPBarFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(ratio, 0, 1, 0)}):Play()
-            HPTextLabel.Text = string.format("%d / %d HP (%d%%)", math.floor(currentHP), math.floor(hum.MaxHealth), math.floor(ratio * 100))
+    SubmitKeyBtn.Activated:Connect(function()
+        if KeyInputBox.Text == CorrectKey then
+            Verified = true
+            KeyErrorLabel.TextColor3 = Color3.fromRGB(50, 220, 50)
+            KeyErrorLabel.Text = "✅ KEY ACCEPTED! LAUNCHING HUB..."
+            task.wait(0.8)
+            KeySystemGui:Destroy()
+            pcall(function() loadHubMain() end)
         else
-            HPTextLabel.Text = "No Humanoid Found"
+            KeyErrorLabel.TextColor3 = Color3.fromRGB(220, 50, 50)
+            KeyErrorLabel.Text = "❌ INVALID KEY! ACCESS DENIED."
         end
-    end
-end)
-
---------------------------------------------------------------------------------
--- SPEED GUI
---------------------------------------------------------------------------------
-local SpeedGui = Instance.new("ScreenGui") SpeedGui.Name = "SharkHubSpeedGui" SpeedGui.ResetOnSpawn = false SpeedGui.DisplayOrder = 105 SpeedGui.Parent = PlayerGui
-local SpeedFrame = Instance.new("Frame") SpeedFrame.Size = UDim2.new(0, 250, 0, 175) SpeedFrame.Position = UDim2.new(0.02, 0, 0.35, 0) SpeedFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) SpeedFrame.Active = true SpeedFrame.ZIndex = 15 SpeedFrame.Parent = SpeedGui Instance.new("UICorner", SpeedFrame).CornerRadius = UDim.new(0, 12)
-local SpeedFrameStroke = Instance.new("UIStroke", SpeedFrame) SpeedFrameStroke.Thickness = 2 SpeedFrameStroke.Color = Color3.fromRGB(255, 110, 0)
-
-makeDraggable(SpeedFrame)
-
-local SpeedTitleBar = Instance.new("TextLabel") SpeedTitleBar.Size = UDim2.new(1, 0, 0, 32) SpeedTitleBar.BackgroundTransparency = 1 SpeedTitleBar.Text = "⚡ SPEED CHARGER" SpeedTitleBar.TextColor3 = Color3.fromRGB(255, 140, 0) SpeedTitleBar.Font = Enum.Font.GothamBold SpeedTitleBar.TextSize = 13 SpeedTitleBar.ZIndex = 16 SpeedTitleBar.Parent = SpeedFrame
-local SpeedInput = Instance.new("TextBox") SpeedInput.Size = UDim2.new(0.88, 0, 0, 32) SpeedInput.Position = UDim2.new(0.06, 0, 0.22, 0) SpeedInput.BackgroundColor3 = Color3.fromRGB(35, 15, 48) SpeedInput.Text = "50" SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255) SpeedInput.Font = Enum.Font.GothamBold SpeedInput.TextSize = 13 SpeedInput.ZIndex = 16 SpeedInput.Active = true SpeedInput.Parent = SpeedFrame Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 8)
-local ApplySpeedBtn = Instance.new("TextButton") ApplySpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) ApplySpeedBtn.Position = UDim2.new(0.06, 0, 0.46, 0) ApplySpeedBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) ApplySpeedBtn.Text = "⚡ APPLY SPEED" ApplySpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) ApplySpeedBtn.Font = Enum.Font.GothamBold ApplySpeedBtn.ZIndex = 16 ApplySpeedBtn.Active = true ApplySpeedBtn.Parent = SpeedFrame Instance.new("UICorner", ApplySpeedBtn).CornerRadius = UDim.new(0, 8)
-local OffSpeedBtn = Instance.new("TextButton") OffSpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) OffSpeedBtn.Position = UDim2.new(0.06, 0, 0.70, 0) OffSpeedBtn.BackgroundColor3 = Color3.fromRGB(100, 20, 20) OffSpeedBtn.Text = "🛑 RESET SPEED (16)" OffSpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) OffSpeedBtn.Font = Enum.Font.GothamBold OffSpeedBtn.ZIndex = 16 OffSpeedBtn.Active = true OffSpeedBtn.Parent = SpeedFrame Instance.new("UICorner", OffSpeedBtn).CornerRadius = UDim.new(0, 8)
-
-safeBindClick(ApplySpeedBtn, function()
-    local val = tonumber(SpeedInput.Text)
-    if val then currentSetSpeed = val local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = val end ApplySpeedBtn.Text = "✅ SPEED SET: " .. val task.delay(1.5, function() ApplySpeedBtn.Text = "⚡ APPLY SPEED" end) end
-end)
-safeBindClick(OffSpeedBtn, function()
-    currentSetSpeed = nil local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = 16 end OffSpeedBtn.Text = "🔴 RESET TO 16" task.delay(1.5, function() OffSpeedBtn.Text = "🛑 RESET SPEED (16)" end)
-end)
-Connections.SpeedLock = RunService.Heartbeat:Connect(function()
-    if currentSetSpeed then local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum and hum.WalkSpeed ~= currentSetSpeed then hum.WalkSpeed = currentSetSpeed end end
-end)
-
---------------------------------------------------------------------------------
--- RADAR & RAKOOF GRADIENT HP DETECTOR GUI
---------------------------------------------------------------------------------
-local RadarFrame = Instance.new("Frame") RadarFrame.Size = UDim2.new(0, 280, 0, 185) RadarFrame.Position = UDim2.new(0.5, 390, 0.5, -92) RadarFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) RadarFrame.Active = true RadarFrame.ZIndex = 15 RadarFrame.Parent = ScreenGui Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0, 12)
-local RadarStroke = Instance.new("UIStroke", RadarFrame) RadarStroke.Thickness = 2 RadarStroke.Color = Color3.fromRGB(255, 110, 0)
-
-makeDraggable(RadarFrame)
-
-local RadarTitle = Instance.new("TextLabel") RadarTitle.Size = UDim2.new(1, -35, 0, 26) RadarTitle.Position = UDim2.new(0, 10, 0, 4) RadarTitle.BackgroundTransparency = 1 RadarTitle.Text = "🔮 DROP RADAR & RAKOOF HP" RadarTitle.TextColor3 = Color3.fromRGB(255, 140, 0) RadarTitle.Font = Enum.Font.GothamBold RadarTitle.TextSize = 12 RadarTitle.TextXAlignment = Enum.TextXAlignment.Left RadarTitle.ZIndex = 16 RadarTitle.Parent = RadarFrame
-
-local RadarCloseBtn = Instance.new("TextButton") RadarCloseBtn.Size = UDim2.new(0, 20, 0, 20) RadarCloseBtn.Position = UDim2.new(1, -24, 0, 4) RadarCloseBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) RadarCloseBtn.Text = "X" RadarCloseBtn.TextColor3 = Color3.new(1, 1, 1) RadarCloseBtn.Font = Enum.Font.GothamBold RadarCloseBtn.ZIndex = 18 RadarCloseBtn.Parent = RadarFrame Instance.new("UICorner", RadarCloseBtn).CornerRadius = UDim.new(0, 5)
-safeBindClick(RadarCloseBtn, function() RadarFrame.Visible = false end)
-
-local DisplayCard = Instance.new("Frame") DisplayCard.Size = UDim2.new(1, -16, 0, 52) DisplayCard.Position = UDim2.new(0, 8, 0, 32) DisplayCard.BackgroundColor3 = Color3.fromRGB(40, 18, 55) DisplayCard.ZIndex = 16 DisplayCard.Parent = RadarFrame Instance.new("UICorner", DisplayCard).CornerRadius = UDim.new(0, 8)
-local RadarItemName = Instance.new("TextLabel") RadarItemName.Size = UDim2.new(1, -12, 0, 20) RadarItemName.Position = UDim2.new(0, 8, 0, 4) RadarItemName.BackgroundTransparency = 1 RadarItemName.Text = "🎁 Searching drops..." RadarItemName.TextColor3 = Color3.fromRGB(255, 255, 255) RadarItemName.Font = Enum.Font.GothamBold RadarItemName.TextSize = 11 RadarItemName.TextXAlignment = Enum.TextXAlignment.Left RadarItemName.ZIndex = 17 RadarItemName.Parent = DisplayCard
-local RadarItemInfo = Instance.new("TextLabel") RadarItemInfo.Size = UDim2.new(1, -12, 0, 18) RadarItemInfo.Position = UDim2.new(0, 8, 0, 26) RadarItemInfo.BackgroundTransparency = 1 RadarItemInfo.Text = "Dist: -- | Chance: --" RadarItemInfo.TextColor3 = Color3.fromRGB(255, 160, 30) RadarItemInfo.Font = Enum.Font.Gotham RadarItemInfo.TextSize = 10 RadarItemInfo.TextXAlignment = Enum.TextXAlignment.Left RadarItemInfo.ZIndex = 17 RadarItemInfo.Parent = DisplayCard
-
-local RakoofCard = Instance.new("Frame") RakoofCard.Size = UDim2.new(1, -16, 0, 82) RakoofCard.Position = UDim2.new(0, 8, 0, 92) RakoofCard.BackgroundColor3 = Color3.fromRGB(40, 12, 28) RakoofCard.ZIndex = 16 RakoofCard.Parent = RadarFrame Instance.new("UICorner", RakoofCard).CornerRadius = UDim.new(0, 8)
-local RakoofCardStroke = Instance.new("UIStroke", RakoofCard) RakoofCardStroke.Thickness = 1.5 RakoofCardStroke.Color = Color3.fromRGB(200, 50, 50)
-
-local RakoofTitle = Instance.new("TextLabel") RakoofTitle.Size = UDim2.new(1, -12, 0, 18) RakoofTitle.Position = UDim2.new(0, 8, 0, 4) RakoofTitle.BackgroundTransparency = 1 RakoofTitle.Text = "👹 RAKOOF (DOOFMMY) HP DETECTOR" RakoofTitle.TextColor3 = Color3.fromRGB(255, 90, 90) RakoofTitle.Font = Enum.Font.GothamBold RakoofTitle.TextSize = 11 RakoofTitle.TextXAlignment = Enum.TextXAlignment.Left RakoofTitle.ZIndex = 17 RakoofTitle.Parent = RakoofCard
-
-local RakoofBarBg = Instance.new("Frame") RakoofBarBg.Size = UDim2.new(1, -16, 0, 20) RakoofBarBg.Position = UDim2.new(0, 8, 0, 26) RakoofBarBg.BackgroundColor3 = Color3.fromRGB(25, 8, 15) RakoofBarBg.ClipsDescendants = true RakoofBarBg.ZIndex = 17 RakoofBarBg.Parent = RakoofCard Instance.new("UICorner", RakoofBarBg).CornerRadius = UDim.new(0, 6)
-local RakoofBarFill = Instance.new("Frame") RakoofBarFill.Size = UDim2.new(1, 0, 1, 0) RakoofBarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255) RakoofBarFill.ZIndex = 18 RakoofBarFill.Parent = RakoofBarBg Instance.new("UICorner", RakoofBarFill).CornerRadius = UDim.new(0, 6)
-
-local RakoofGrad = Instance.new("UIGradient")
-RakoofGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 50)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 20, 20)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 30))
-})
-RakoofGrad.Rotation = 90
-RakoofGrad.Parent = RakoofBarFill
-
-local RakoofHPLabel = Instance.new("TextLabel") RakoofHPLabel.Size = UDim2.new(1, -12, 0, 22) RakoofHPLabel.Position = UDim2.new(0, 8, 0, 52) RakoofHPLabel.BackgroundTransparency = 1 RakoofHPLabel.Text = "Searching RakoofHP & RakoofMaxHP..." RakoofHPLabel.TextColor3 = Color3.fromRGB(255, 200, 200) RakoofHPLabel.Font = Enum.Font.GothamBold RakoofHPLabel.TextSize = 11 RakoofHPLabel.TextXAlignment = Enum.TextXAlignment.Left RakoofHPLabel.ZIndex = 17 RakoofHPLabel.Parent = RakoofCard
-
-Tasks.Radar = task.spawn(function()
-    while true do
-        if RadarFrame.Visible then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local closestItem, closestDistance = nil, math.huge
-                for _, container in ipairs(getDropContainers()) do
-                    for _, item in ipairs(container:GetChildren()) do
-                        local matchedName = nil
-                        for tName, _ in pairs(TARGET_ITEMS_LOOKUP) do if item.Name:lower():find(tName) then matchedName = tName break end end
-                        if matchedName then
-                            local part = item:IsA("BasePart") and item or item:FindFirstChild("Handle") or item:FindFirstChildWhichIsA("BasePart")
-                            if part then
-                                local dist = (hrp.Position - part.Position).Magnitude
-                                if dist < closestDistance then closestDistance = dist closestItem = matchedName end
-                            end
-                        end
-                    end
-                end
-                if closestItem and closestDistance <= 150 then
-                    RadarItemName.Text = "🎁 " .. closestItem
-                    RadarItemInfo.Text = string.format("Dist: %d studs | Chance: %s", math.floor(closestDistance), ITEM_PROBABILITIES[closestItem] or "40%")
-                else
-                    RadarItemName.Text = "🎁 No Target Drops Nearby" RadarItemInfo.Text = "Scanning workspace..."
-                end
-            end
-
-            local curHP, maxHP = nil, nil
-            local hpObj = Workspace:FindFirstChild("RakoofHP", true) or ReplicatedStorage:FindFirstChild("RakoofHP", true)
-            local maxHpObj = Workspace:FindFirstChild("RakoofMaxHP", true) or ReplicatedStorage:FindFirstChild("RakoofMaxHP", true)
-
-            if hpObj and maxHpObj then
-                if hpObj:IsA("ValueBase") then curHP = hpObj.Value end
-                if maxHpObj:IsA("ValueBase") then maxHP = maxHpObj.Value end
-            end
-
-            if curHP == nil or maxHP == nil then
-                local rakoofModel, _ = findTargetModel(TARGET_NAME)
-                if rakoofModel then
-                    local attrHp = rakoofModel:GetAttribute("RakoofHP") or rakoofModel:GetAttribute("HP")
-                    local attrMaxHp = rakoofModel:GetAttribute("RakoofMaxHP") or rakoofModel:GetAttribute("MaxHP")
-                    
-                    if attrHp and attrMaxHp then
-                        curHP, maxHP = attrHp, attrMaxHp
-                    else
-                        local hum = rakoofModel:FindFirstChildOfClass("Humanoid")
-                        if hum then
-                            curHP, maxHP = hum.Health, hum.MaxHealth
-                        end
-                    end
-                end
-            end
-
-            if curHP ~= nil and maxHP ~= nil and maxHP > 0 then
-                local ratio = math.clamp(curHP / maxHP, 0, 1)
-                TweenService:Create(RakoofBarFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    Size = UDim2.new(ratio, 0, 1, 0)
-                }):Play()
-                
-                RakoofHPLabel.Text = string.format("❤ HP: %d / %d (%d%%)", math.floor(math.max(curHP, 0)), math.floor(maxHP), math.floor(ratio * 100))
-            else
-                TweenService:Create(RakoofBarFill, TweenInfo.new(0.2), {Size = UDim2.new(0, 0, 1, 0)}):Play()
-                RakoofHPLabel.Text = "👻 RakoofHP / RakoofMaxHP Not Found"
-            end
-        end
-        task.wait(0.25)
-    end
-end)
-
---------------------------------------------------------------------------------
--- HUB BUTTON BINDINGS
---------------------------------------------------------------------------------
-local FlyBtn, FlyStroke, FlyGrad = CreateStaffButton("🦅 FLY HACK: OFF", 1, false)
-local InfJumpBtn, InfJumpStroke, InfJumpGrad = CreateStaffButton("🦘 INFINITE JUMP LOOP: OFF", 2, false)
-local FullBrightBtn, FullBrightStroke, FullBrightGrad = CreateStaffButton("💡 FULL BRIGHT: OFF", 3, false)
-local TorsoVFXBtn, TorsoVFXStroke, TorsoVFXGrad = CreateStaffButton("🔥 TORSO VFX ATTACHER: OFF", 4, false)
-local StaminaBtn, StaminaStroke, StaminaGrad = CreateStaffButton("⚡ MAX STAMINA: OFF", 5, false)
-
-local BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad = CreateStaffButton("🔥 BRO MAX LUCK 100M%: OFF", 6, false)
-local AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad = CreateStaffButton("🛑 AUTO DISABLE CONE: OFF", 7, false)
-local AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad = CreateStaffButton("🤝 AUTO TRADE: OFF", 8, false)
-local AIBattleBtn, AIBattleStroke, AIBattleGrad = CreateStaffButton("🤖 AI BATTLE (The_Rake): OFF", 9, false)
-local AutoAttackBtn, AutoAttackStroke, AutoAttackGrad = CreateStaffButton("⚔️ Fast Spam Clicker: OFF", 10, false)
-local BringBossBtn, BringBossStroke, BringBossGrad = CreateStaffButton("🧲 Bring Boss To Player: OFF", 11, false)
-local HitboxBtn, HitboxStroke, HitboxGrad = CreateStaffButton("📦 Expand Target Hitbox: OFF", 12, false)
-local TriggerBotBtn, TriggerBotStroke, TriggerBotGrad = CreateStaffButton("🎯 Trigger Bot: OFF", 13, false)
-local AutoPickupBtn, AutoPickupStroke, AutoPickupGrad = CreateStaffButton("🎁 Golden Staff Auto Pickup: OFF", 14, false)
-local ForceDropBtn, ForceDropStroke, ForceDropGrad = CreateStaffButton("💥 FORCE DROP 80000%: OFF", 15, false)
-local Luck250Btn, Luck250Stroke, Luck250Grad = CreateStaffButton("🍀 250% WORLD LUCK: OFF", 16, false)
-local Luck1000Btn, Luck1000Stroke, Luck1000Grad = CreateStaffButton("⚡ 1000% WORLD LUCK: OFF", 17, false)
-local AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad = CreateStaffButton("🚨 Auto Escape (20% HP): OFF", 18, false)
-local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("🧲 Bring Rakoof: OFF", 19, false)
-local ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad = CreateStaffButton("🎃 TOGGLE PLAYER HP GUI: ON", 20, true)
-
--- CANDY PICKER-UPPER TELEPORT BUTTON
-local CandyTpBtn, CandyTpStroke, CandyTpGrad = CreateStaffButton("🍬 TP TO CANDYCONES/PACKS", 21, false)
-
---------------------------------------------------------------------------------
--- FEATURE LOGIC IMPLEMENTATIONS
---------------------------------------------------------------------------------
-
--- CANDY CONE / PACK TELEPORT BUTTON LOGIC
-safeBindClick(CandyTpBtn, function()
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local targetPart = nil
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") or obj:IsA("BasePart") then
-            local nameLower = obj.Name:lower()
-            if nameLower:find("candycone") or nameLower:find("candypack") or nameLower:find("candy_cone") or nameLower:find("candy_pack") then
-                targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                if targetPart then break end
-            end
-        end
-    end
-
-    if targetPart then
-        hrp.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
-        CandyTpBtn.Text = "✅ TELEPORTED TO CANDY!"
-    else
-        CandyTpBtn.Text = "⚠️ NO CANDYCONES/PACKS FOUND"
-    end
-
-    task.delay(1.5, function()
-        CandyTpBtn.Text = "🍬 TP TO CANDYCONES/PACKS"
     end)
-end)
 
--- 1. FLY FEATURE
-local flyBodyVel, flyBodyGyro
-safeBindClick(FlyBtn, function()
-    Features.Fly = not Features.Fly
-    updateStateUI(FlyBtn, FlyStroke, FlyGrad, Features.Fly, "🦅 FLY HACK: ON", "🦅 FLY HACK: OFF")
-    if Connections.Fly then Connections.Fly:Disconnect() Connections.Fly = nil end
-    if flyBodyVel then flyBodyVel:Destroy() flyBodyVel = nil end
-    if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
+    repeat task.wait(0.1) until Verified
+end
 
-    if Features.Fly then
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            flyBodyVel = Instance.new("BodyVelocity")
-            flyBodyVel.MaxForce = Vector3.new(1,1,1) * 1e6
-            flyBodyVel.Velocity = Vector3.zero
-            flyBodyVel.Parent = hrp
-
-            flyBodyGyro = Instance.new("BodyGyro")
-            flyBodyGyro.MaxTorque = Vector3.new(1,1,1) * 1e6
-            flyBodyGyro.CFrame = hrp.CFrame
-            flyBodyGyro.Parent = hrp
-
-            Connections.Fly = RunService.RenderStepped:Connect(function()
-                if not Features.Fly or not hrp or not flyBodyVel or not flyBodyGyro then return end
-                local camCF = Workspace.CurrentCamera.CFrame
-                flyBodyGyro.CFrame = camCF
-                local dir = Vector3.zero
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
-                flyBodyVel.Velocity = (dir.Magnitude > 0) and (dir.Unit * 60) or Vector3.zero
-            end)
-        end
+--------------------------------------------------------------------------------
+-- MAIN HUB EXECUTION FUNCTION
+--------------------------------------------------------------------------------
+function loadHubMain()
+    if getgenv().SharkHubCleanup then
+        pcall(getgenv().SharkHubCleanup)
     end
-end)
 
--- 2. INFINITE JUMP LOOP FEATURE
-safeBindClick(InfJumpBtn, function()
-    Features.InfJump = not Features.InfJump
-    updateStateUI(InfJumpBtn, InfJumpStroke, InfJumpGrad, Features.InfJump, "🦘 INFINITE JUMP LOOP: ON", "🦘 INFINITE JUMP LOOP: OFF")
-    if Connections.InfJump then Connections.InfJump:Disconnect() Connections.InfJump = nil end
-    if Features.InfJump then
-        Connections.InfJump = UserInputService.JumpRequest:Connect(function()
-            if Features.InfJump and LocalPlayer.Character then
-                local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-            end
-        end)
-    end
-end)
+    local VirtualUser = pcall(function() return game:GetService("VirtualUser") end) and game:GetService("VirtualUser") or nil
 
--- 3. FULL BRIGHT FEATURE
-safeBindClick(FullBrightBtn, function()
-    Features.FullBright = not Features.FullBright
-    updateStateUI(FullBrightBtn, FullBrightStroke, FullBrightGrad, Features.FullBright, "💡 FULL BRIGHT: ON", "💡 FULL BRIGHT: OFF")
-    if Features.FullBright then
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 14
-        Lighting.GlobalShadows = false
-    else
-        Lighting.Ambient = OrigLighting.Ambient
-        Lighting.OutdoorAmbient = OrigLighting.OutdoorAmbient
-        Lighting.Brightness = OrigLighting.Brightness
-        Lighting.ClockTime = OrigLighting.ClockTime
-        Lighting.GlobalShadows = OrigLighting.GlobalShadows
-    end
-end)
-
--- 4. TORSO VFX ATTACHER FEATURE
-safeBindClick(TorsoVFXBtn, function()
-    Features.TorsoVFX = not Features.TorsoVFX
-    updateStateUI(TorsoVFXBtn, TorsoVFXStroke, TorsoVFXGrad, Features.TorsoVFX, "🔥 TORSO VFX ATTACHER: ON", "🔥 TORSO VFX ATTACHER: OFF")
-    local char = LocalPlayer.Character
-    local torso = char and (char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart"))
-    
-    if torso then
-        for _, child in ipairs(torso:GetChildren()) do
-            if child.Name:find("SharkHub_VFX") then child:Destroy() end
-        end
-
-        if Features.TorsoVFX then
-            local vfxFolder = ReplicatedStorage:FindFirstChild("Vfx") or ReplicatedStorage:FindFirstChild("VFX") or ReplicatedStorage:FindFirstChild("vfx")
-            if vfxFolder then
-                local attachedCount = 0
-                for _, obj in ipairs(vfxFolder:GetChildren()) do
-                    local clone = obj:Clone()
-                    clone.Name = "SharkHub_VFX_" .. obj.Name
-                    clone.Parent = torso
-                    attachedCount = attachedCount + 1
-                end
-                TorsoVFXBtn.Text = string.format("🔥 VFX ATTACHED (%d ITEMS)", attachedCount)
-            else
-                TorsoVFXBtn.Text = "⚠️ REPLICATEDSTORAGE.VFX MISSING"
-            end
-        end
-    end
-end)
-
--- 5. MAX STAMINA FEATURE (REMOTE FIRESIGNAL & ATTRIBUTE OVERRIDE LOOP)
-safeBindClick(StaminaBtn, function()
-    Features.MaxStamina = not Features.MaxStamina
-    updateStateUI(StaminaBtn, StaminaStroke, StaminaGrad, Features.MaxStamina, "⚡ MAX STAMINA: ON", "⚡ MAX STAMINA: OFF")
-    
-    if Features.MaxStamina then
-        if Tasks.Stamina then
-            task.cancel(Tasks.Stamina)
-            Tasks.Stamina = nil
-        end
-
-        Tasks.Stamina = task.spawn(function()
-            while Features.MaxStamina do
-                pcall(function()
-                    -- Remote signal trigger
-                    local remotesFolder = ReplicatedStorage:FindFirstChild("PlayerRemotes")
-                    if remotesFolder and remotesFolder:FindFirstChild("SetStaminaValues") and typeof(firesignal) == "function" then
-                        firesignal(remotesFolder.SetStaminaValues.OnClientEvent, 100, 15, 42, 999999)
-                    end
-                    
-                    -- Character & Player Value/Attribute Override
-                    local char = LocalPlayer.Character
-                    if char then
-                        local staminaVal = char:FindFirstChild("Stamina")
-                        if staminaVal then staminaVal.Value = 999999 end
-
-                        local energyVal = char:FindFirstChild("Energy")
-                        if energyVal then energyVal.Value = 999999 end
-
-                        char:SetAttribute("Stamina", 999999)
-                        char:SetAttribute("MaxStamina", 999999)
-                    end
-
-                    if LocalPlayer then
-                        LocalPlayer:SetAttribute("Stamina", 999999)
+    --------------------------------------------------------------------------------
+    -- UNIVERSAL DRAGGABLE HELPER
+    --------------------------------------------------------------------------------
+    local function makeDraggable(guiFrame, dragHandle)
+        dragHandle = dragHandle or guiFrame
+        local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
+        
+        dragHandle.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = guiFrame.Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
                     end
                 end)
-                task.wait(0.2)
             end
         end)
-    else
-        if Tasks.Stamina then
-            task.cancel(Tasks.Stamina)
-            Tasks.Stamina = nil
+
+        dragHandle.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                dragInput = input
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if input == dragInput and dragging then
+                local delta = input.Position - dragStart
+                guiFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+    end
+
+    --------------------------------------------------------------------------------
+    -- TARGET LISTS & CONFIG
+    --------------------------------------------------------------------------------
+    local TARGET_ITEMS_LIST = {
+        "GoldenApple", "LegendaryEnergy", "IgnitionFlame", 
+        "SnowFlakes", "CorruptedHalo", "StrangeBar", "BurnedBone",
+        "Penguin", "PenguinPart", "PenguinParts", "Mesh", "Meshes",
+        "CrucibleSword", "Imposta", "NullBlock", "TrainerCap", "SlashProjectile2"
+    }
+
+    local TARGET_ITEMS_LOOKUP = {}
+    for _, item in ipairs(TARGET_ITEMS_LIST) do TARGET_ITEMS_LOOKUP[item:lower()] = true end
+
+    local ITEM_PROBABILITIES = {
+        ["cruciblesword"] = "3%", ["corruptedhalo"] = "5%", ["ignitionflame"] = "8%",
+        ["legendaryenergy"] = "10%", ["goldenapple"] = "15%", ["strangebar"] = "20%",
+        ["burnedbone"] = "25%", ["nullblock"] = "30%", ["default"] = "40%"
+    }
+
+    local RAKE_NAME = "the_rake"
+    local TARGET_NAME = "doofmmy"
+    local TOGGLE_KEY = Enum.KeyCode.RightControl
+
+    local Features = {
+        BroMaxLuck = false, AutoDisableCone = false, AutoTrade = false,
+        AIBattle = false, AutoAttack = false, BringBoss = false, ExpandHitbox = false,
+        AutoPickup = false, TriggerBot = false, AutoEscape = false,
+        BringRakoof = false, ForceDrop = false, UseWhitelist = true,
+        Luck250 = false, Luck500 = false, Luck750 = false, Luck1000 = false,
+        Fly = false, InfJump = false, FullBright = false, TorsoVFX = false,
+        MaxStamina = false, AutoCandyTP = false
+    }
+
+    local Connections, Tasks = {}, {}
+    local currentSetSpeed = nil
+
+    local OrigLighting = {
+        Ambient = Lighting.Ambient,
+        OutdoorAmbient = Lighting.OutdoorAmbient,
+        Brightness = Lighting.Brightness,
+        ClockTime = Lighting.ClockTime,
+        GlobalShadows = Lighting.GlobalShadows
+    }
+
+    getgenv().SharkHubCleanup = function()
+        for _, conn in pairs(Connections) do if conn then conn:Disconnect() end end
+        for _, taskRef in pairs(Tasks) do if taskRef then pcall(task.cancel, taskRef) end end
+        table.clear(Connections)
+        table.clear(Tasks)
+        if Features.FullBright then
+            Lighting.Ambient = OrigLighting.Ambient
+            Lighting.OutdoorAmbient = OrigLighting.OutdoorAmbient
+            Lighting.Brightness = OrigLighting.Brightness
+            Lighting.ClockTime = OrigLighting.ClockTime
+            Lighting.GlobalShadows = OrigLighting.GlobalShadows
+        end
+        if PlayerGui:FindFirstChild("SharkHubStaffGui") then PlayerGui.SharkHubStaffGui:Destroy() end
+        if PlayerGui:FindFirstChild("SharkHubSpeedGui") then PlayerGui.SharkHubSpeedGui:Destroy() end
+        if PlayerGui:FindFirstChild("SharkHubPlayerHPGui") then PlayerGui.SharkHubPlayerHPGui:Destroy() end
+    end
+
+    --------------------------------------------------------------------------------
+    -- HALLOWEEN THEME GRADIENTS
+    --------------------------------------------------------------------------------
+    local ORANGE_OFF_GRADIENT = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 25, 5)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(95, 40, 10)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 20, 0))
+    })
+    local ORANGE_ON_GRADIENT = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 110, 0)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 160, 30)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 80, 0))
+    })
+
+    --------------------------------------------------------------------------------
+    -- EXPLOIT HELPERS
+    --------------------------------------------------------------------------------
+    local function safeTouchInterest(part1, part2)
+        if typeof(firetouchinterest) == "function" then
+            pcall(function() firetouchinterest(part1, part2, 0) firetouchinterest(part1, part2, 1) end)
+        else
+            pcall(function() if not part2.Anchored then part2.CFrame = part1.CFrame end end)
         end
     end
-end)
 
--- 6. BRO MAX LUCK 100M%
-safeBindClick(BroMaxLuckBtn, function()
-    Features.BroMaxLuck = not Features.BroMaxLuck
-    updateStateUI(BroMaxLuckBtn, BroMaxLuckStroke, BroMaxLuckGrad, Features.BroMaxLuck, "🔥 BRO MAX LUCK 100M%: ON", "🔥 BRO MAX LUCK 100M%: OFF")
-    if Connections.BroMaxLuck then Connections.BroMaxLuck:Disconnect() Connections.BroMaxLuck = nil end
-    if Features.BroMaxLuck then
-        Connections.BroMaxLuck = RunService.Heartbeat:Connect(function()
-            for _, remote in ipairs(cachedRemotes.LootItem) do pcall(function() remote:FireServer(100000000) end) end
-        end)
-        pcall(function() LocalPlayer:SetAttribute("LuckMultiplier", 100000000) end)
-    end
-end)
-
--- 7. AUTO DISABLE CONE
-safeBindClick(AutoDisableConeBtn, function()
-    Features.AutoDisableCone = not Features.AutoDisableCone
-    updateStateUI(AutoDisableConeBtn, AutoDisableConeStroke, AutoDisableConeGrad, Features.AutoDisableCone, "🛑 AUTO DISABLE CONE: ON", "🛑 AUTO DISABLE CONE: OFF")
-    if Connections.AutoDisableCone then Connections.AutoDisableCone:Disconnect() Connections.AutoDisableCone = nil end
-    if Features.AutoDisableCone then
-        Connections.AutoDisableCone = RunService.Heartbeat:Connect(function()
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj:IsA("ConeHandleAdornment") or (obj:IsA("BasePart") and obj.Name:lower():find("cone")) then
-                    pcall(function() obj.Transparency = 1 obj.CanCollide = false end)
-                end
-            end
-        end)
-    end
-end)
-
--- 8. AUTO TRADE
-safeBindClick(AutoTradeToggleBtn, function()
-    Features.AutoTrade = not Features.AutoTrade
-    updateStateUI(AutoTradeToggleBtn, AutoTradeStroke, AutoTradeGrad, Features.AutoTrade, "🤝 AUTO TRADE: ON", "🤝 AUTO TRADE: OFF")
-    if Connections.AutoTrade then Connections.AutoTrade:Disconnect() Connections.AutoTrade = nil end
-    if Features.AutoTrade then
-        Connections.AutoTrade = RunService.Heartbeat:Connect(function()
-            local tradeRemote = ReplicatedStorage:FindFirstChild("TradeRemote", true) or ReplicatedStorage:FindFirstChild("AcceptTrade", true)
-            if tradeRemote and tradeRemote:IsA("RemoteEvent") then
-                pcall(function() tradeRemote:FireServer() end)
-            end
-        end)
-    end
-end)
-
--- 9. AI BATTLE
-safeBindClick(AIBattleBtn, function()
-    Features.AIBattle = not Features.AIBattle
-    updateStateUI(AIBattleBtn, AIBattleStroke, AIBattleGrad, Features.AIBattle, "🤖 AI BATTLE (Rake): ON", "🤖 AI BATTLE (The_Rake): OFF")
-    if Connections.AIBattle then Connections.AIBattle:Disconnect() Connections.AIBattle = nil end
-    if Features.AIBattle then
-        Connections.AIBattle = RunService.RenderStepped:Connect(function()
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local _, rakePart = findTargetModel(RAKE_NAME)
-            if hrp and rakePart then
-                local angle = tick() * 12
-                hrp.CFrame = CFrame.new(rakePart.Position + Vector3.new(math.cos(angle) * 8, 2, math.sin(angle) * 8), rakePart.Position)
-                executeSpamClick()
-            end
-        end)
-    end
-end)
-
--- 10. AUTO ATTACK / SPAM CLICKER
-safeBindClick(AutoAttackBtn, function()
-    Features.AutoAttack = not Features.AutoAttack
-    updateStateUI(AutoAttackBtn, AutoAttackStroke, AutoAttackGrad, Features.AutoAttack, "⚔ Spam Clicker: ON", "⚔️ Fast Spam Clicker: OFF")
-    if Connections.Attack then Connections.Attack:Disconnect() Connections.Attack = nil end
-    if Features.AutoAttack then Connections.Attack = RunService.RenderStepped:Connect(executeSpamClick) end
-end)
-
--- 11. BRING BOSS
-safeBindClick(BringBossBtn, function()
-    Features.BringBoss = not Features.BringBoss
-    updateStateUI(BringBossBtn, BringBossStroke, BringBossGrad, Features.BringBoss, "🧲 Bring Boss: ON", "🧲 Bring Boss To Player: OFF")
-    if Connections.BringBoss then Connections.BringBoss:Disconnect() Connections.BringBoss = nil end
-    if Features.BringBoss then
-        Connections.BringBoss = RunService.Heartbeat:Connect(function()
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local _, targetPart = findTargetModel(RAKE_NAME)
-            if hrp and targetPart then targetPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -3) end
-        end)
-    end
-end)
-
--- 12. EXPAND HITBOX
-safeBindClick(HitboxBtn, function()
-    Features.ExpandHitbox = not Features.ExpandHitbox
-    updateStateUI(HitboxBtn, HitboxStroke, HitboxGrad, Features.ExpandHitbox, "📦 Expand Hitbox: ON", "📦 Expand Target Hitbox: OFF")
-    if Connections.Hitbox then Connections.Hitbox:Disconnect() Connections.Hitbox = nil end
-    if Features.ExpandHitbox then
-        Connections.Hitbox = RunService.Heartbeat:Connect(function()
-            local _, targetPart = findTargetModel(RAKE_NAME)
-            if not targetPart then _, targetPart = findTargetModel(TARGET_NAME) end
-            if targetPart then
-                pcall(function()
-                    targetPart.Size = Vector3.new(15, 15, 15)
-                    targetPart.Transparency = 0.7
-                    targetPart.BrickColor = BrickColor.new("Bright orange")
-                    targetPart.CanCollide = false
-                end)
-            end
-        end)
-    else
-        local _, targetPart = findTargetModel(RAKE_NAME)
-        if not targetPart then _, targetPart = findTargetModel(TARGET_NAME) end
-        if targetPart then
+    local function executeSpamClick()
+        local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+        if tool then
+            pcall(function() tool:Activate() end)
+        elseif VirtualUser then
             pcall(function()
-                targetPart.Size = Vector3.new(2, 2, 1)
-                targetPart.Transparency = 0
+                VirtualUser:Button1Down(Vector2.zero, Workspace.CurrentCamera.CFrame)
+                VirtualUser:Button1Up(Vector2.zero, Workspace.CurrentCamera.CFrame)
             end)
         end
     end
-end)
 
--- 13. TRIGGER BOT
-safeBindClick(TriggerBotBtn, function()
-    Features.TriggerBot = not Features.TriggerBot
-    updateStateUI(TriggerBotBtn, TriggerBotStroke, TriggerBotGrad, Features.TriggerBot, "🎯 Trigger Bot: ON", "🎯 Trigger Bot: OFF")
-    if Connections.TriggerBot then Connections.TriggerBot:Disconnect() Connections.TriggerBot = nil end
-    if Features.TriggerBot then
-        Connections.TriggerBot = RunService.RenderStepped:Connect(function()
-            local mouse = LocalPlayer:GetMouse()
-            if mouse and mouse.Target then
-                local model = mouse.Target:FindFirstAncestorOfClass("Model")
-                if model and (model.Name:lower():find(RAKE_NAME) or model.Name:lower():find(TARGET_NAME)) then
-                    executeSpamClick()
-                end
+    local cachedRemotes = { GiftRain = {}, LootItem = {}, SpawnItem = {} }
+    local function updateRemoteCache()
+        table.clear(cachedRemotes.GiftRain)
+        table.clear(cachedRemotes.LootItem)
+        table.clear(cachedRemotes.SpawnItem)
+        local search = ReplicatedStorage:FindFirstChild("Remotes") or ReplicatedStorage
+        for _, obj in ipairs(search:GetDescendants()) do
+            if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") or obj:IsA("BindableEvent") then
+                local n = obj.Name:lower()
+                if n:find("giftrain") then table.insert(cachedRemotes.GiftRain, obj)
+                elseif n:find("lootitem") and not n:find("player") then table.insert(cachedRemotes.LootItem, obj)
+                elseif n:find("spawnitem") then table.insert(cachedRemotes.SpawnItem, obj) end
             end
-        end)
+        end
     end
-end)
+    updateRemoteCache()
 
--- 14. AUTO PICKUP
-safeBindClick(AutoPickupBtn, function()
-    Features.AutoPickup = not Features.AutoPickup
-    updateStateUI(AutoPickupBtn, AutoPickupStroke, AutoPickupGrad, Features.AutoPickup, "🎁 Auto Pickup: ON", "🎁 Golden Staff Auto Pickup: OFF")
-    if Connections.Pickup then Connections.Pickup:Disconnect() Connections.Pickup = nil end
-    if Features.AutoPickup then
-        Connections.Pickup = RunService.Heartbeat:Connect(function()
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-            for _, container in ipairs(getDropContainers()) do
-                for _, obj in ipairs(container:GetChildren()) do
-                    if not Features.UseWhitelist or isWhitelistedItem(obj.Name) then
-                        local h = obj:IsA("BasePart") and obj or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                        if h then safeTouchInterest(hrp, h) end
-                    end
-                end
+    local function findTargetModel(query)
+        local qLower = query:lower()
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            if obj:IsA("Model") and obj.Name:lower():find(qLower) then
+                local p = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj:FindFirstChildWhichIsA("BasePart")
+                if p then return obj, p end
             end
+        end
+        return nil, nil
+    end
+
+    local function isWhitelistedItem(name)
+        local nameLower = name:lower()
+        for key, _ in pairs(TARGET_ITEMS_LOOKUP) do
+            if nameLower:find(key) then return true end
+        end
+        return false
+    end
+
+    local function getDropContainers()
+        local containers = {}
+        local rsDrops = ReplicatedStorage:FindFirstChild("Drops")
+        if rsDrops then table.insert(containers, rsDrops) end
+        table.insert(containers, ReplicatedStorage)
+        local wsDrops = Workspace:FindFirstChild("Drops")
+        if wsDrops then table.insert(containers, wsDrops) end
+        table.insert(containers, Workspace)
+        return containers
+    end
+
+    local function safeBindClick(button, callback)
+        button.Activated:Connect(function()
+            pcall(callback)
         end)
     end
-end)
 
--- 15. FORCE DROP 80,000%
-safeBindClick(ForceDropBtn, function()
-    Features.ForceDrop = not Features.ForceDrop
-    updateStateUI(ForceDropBtn, ForceDropStroke, ForceDropGrad, Features.ForceDrop, "💥 FORCE DROP 80000%: ON", "💥 FORCE DROP 80000%: OFF")
-    if Connections.ForceDrop then Connections.ForceDrop:Disconnect() Connections.ForceDrop = nil end
-    if Features.ForceDrop then
-        Connections.ForceDrop = RunService.Heartbeat:Connect(function()
-            for _, remote in ipairs(cachedRemotes.LootItem) do pcall(function() remote:FireServer() end) end
-            for _, remote in ipairs(cachedRemotes.SpawnItem) do pcall(function() remote:FireServer() end) end
-            for _, remote in ipairs(cachedRemotes.GiftRain) do pcall(function() remote:FireServer() end) end
-        end)
+    --------------------------------------------------------------------------------
+    -- MAIN HALLOWEEN GUI
+    --------------------------------------------------------------------------------
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "SharkHubStaffGui"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.DisplayOrder = 100
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = PlayerGui
+
+    -- Toggle Icon (Spooky Pumpkin)
+    local ToggleIcon = Instance.new("TextButton")
+    ToggleIcon.Size = UDim2.new(0, 52, 0, 52)
+    ToggleIcon.Position = UDim2.new(0, 20, 0.5, -26)
+    ToggleIcon.BackgroundColor3 = Color3.fromRGB(35, 12, 45)
+    ToggleIcon.Text = "🎃"
+    ToggleIcon.TextSize = 30
+    ToggleIcon.ZIndex = 200
+    ToggleIcon.Active = true
+    ToggleIcon.Parent = ScreenGui
+    Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(0, 16)
+    local IconStroke = Instance.new("UIStroke", ToggleIcon) IconStroke.Thickness = 2 IconStroke.Color = Color3.fromRGB(255, 120, 0)
+
+    makeDraggable(ToggleIcon)
+
+    -- Main Frame
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 760, 0, 500)
+    MainFrame.Position = UDim2.new(0.5, -380, 0.5, -250)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
+    MainFrame.ClipsDescendants = false
+    MainFrame.Active = true
+    MainFrame.ZIndex = 10
+    MainFrame.Parent = ScreenGui
+    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
+    local MainStroke = Instance.new("UIStroke", MainFrame) MainStroke.Thickness = 2.5 MainStroke.Color = Color3.fromRGB(255, 110, 0)
+
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Size = UDim2.new(1, 0, 0, 54)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(32, 14, 46)
+    TitleBar.ZIndex = 11
+    TitleBar.Active = true
+    TitleBar.Parent = MainFrame
+    Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 16)
+
+    makeDraggable(MainFrame, TitleBar)
+
+    local TitleText = Instance.new("TextLabel")
+    TitleText.Size = UDim2.new(0.65, 0, 1, 0) TitleText.Position = UDim2.new(0, 18, 0, 0) TitleText.BackgroundTransparency = 1
+    TitleText.Text = "🎃 SHARK HUB V5 — HALLOWEEN SPOOKY HUB 👻" TitleText.TextColor3 = Color3.fromRGB(255, 140, 0)
+    TitleText.Font = Enum.Font.GothamBold TitleText.TextSize = 15 TitleText.TextXAlignment = Enum.TextXAlignment.Left TitleText.ZIndex = 12 TitleText.Parent = TitleBar
+
+    local MinimizeBtn = Instance.new("TextButton") MinimizeBtn.Size = UDim2.new(0, 32, 0, 32) MinimizeBtn.Position = UDim2.new(1, -82, 0.5, -16)
+    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) MinimizeBtn.Text = "-" MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255) MinimizeBtn.Font = Enum.Font.GothamBold MinimizeBtn.ZIndex = 13 MinimizeBtn.Active = true MinimizeBtn.Parent = TitleBar
+    Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 8)
+
+    local CloseBtn = Instance.new("TextButton") CloseBtn.Size = UDim2.new(0, 32, 0, 32) CloseBtn.Position = UDim2.new(1, -44, 0.5, -16)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40) CloseBtn.Text = "X" CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255) CloseBtn.Font = Enum.Font.GothamBold CloseBtn.ZIndex = 13 CloseBtn.Active = true CloseBtn.Parent = TitleBar
+    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
+
+    local ScrollingFrame = Instance.new("ScrollingFrame")
+    ScrollingFrame.Size = UDim2.new(1, -24, 1, -70) ScrollingFrame.Position = UDim2.new(0, 12, 0, 60)
+    ScrollingFrame.BackgroundTransparency = 1 ScrollingFrame.ScrollBarThickness = 6 ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 120, 0)
+    ScrollingFrame.ZIndex = 11 ScrollingFrame.Active = true ScrollingFrame.Selectable = true ScrollingFrame.ClipsDescendants = true ScrollingFrame.Parent = MainFrame
+
+    safeBindClick(MinimizeBtn, function()
+        ScrollingFrame.Visible = not ScrollingFrame.Visible
+        MainFrame.Size = ScrollingFrame.Visible and UDim2.new(0, 760, 0, 500) or UDim2.new(0, 760, 0, 54)
+        MinimizeBtn.Text = ScrollingFrame.Visible and "-" or "+"
+    end)
+    safeBindClick(CloseBtn, function() MainFrame.Visible = false end)
+
+    local UIGridLayout = Instance.new("UIGridLayout")
+    UIGridLayout.CellSize = UDim2.new(0.485, 0, 0, 44) UIGridLayout.CellPadding = UDim2.new(0.03, 0, 0, 10)
+    UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder UIGridLayout.Parent = ScrollingFrame
+    UIGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIGridLayout.AbsoluteContentSize.Y + 40)
+    end)
+
+    local function CreateStaffButton(text, order, initialActive)
+        local btn = Instance.new("TextButton")
+        btn.BackgroundColor3 = Color3.fromRGB(35, 15, 48) btn.Text = text btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamBold btn.TextSize = 11 btn.LayoutOrder = order btn.ZIndex = 12 btn.Active = true btn.AutoButtonColor = true btn.Parent = ScrollingFrame
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
+        local grad = Instance.new("UIGradient") grad.Color = initialActive and ORANGE_ON_GRADIENT or ORANGE_OFF_GRADIENT grad.Rotation = 90 grad.Parent = btn
+        local stroke = Instance.new("UIStroke", btn) stroke.Thickness = 1.5 stroke.Color = initialActive and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(100, 45, 120)
+        return btn, stroke, grad
     end
-end)
 
--- 16. 250% WORLD LUCK
-safeBindClick(Luck250Btn, function()
-    Features.Luck250 = not Features.Luck250
-    updateStateUI(Luck250Btn, Luck250Stroke, Luck250Grad, Features.Luck250, "🍀 250% WORLD LUCK: ON", "🍀 250% WORLD LUCK: OFF")
-    pcall(function() LocalPlayer:SetAttribute("WorldLuck", Features.Luck250 and 2.5 or 1) end)
-end)
+    local function updateStateUI(btn, stroke, grad, state, textOn, textOff)
+        btn.Text = state and textOn or textOff
+        grad.Color = state and ORANGE_ON_GRADIENT or ORANGE_OFF_GRADIENT
+        stroke.Color = state and Color3.fromRGB(255, 140, 0) or Color3.fromRGB(100, 45, 120)
+    end
 
--- 17. 1000% WORLD LUCK
-safeBindClick(Luck1000Btn, function()
-    Features.Luck1000 = not Features.Luck1000
-    updateStateUI(Luck1000Btn, Luck1000Stroke, Luck1000Grad, Features.Luck1000, "⚡ 1000% WORLD LUCK: ON", "⚡ 1000% WORLD LUCK: OFF")
-    pcall(function() LocalPlayer:SetAttribute("WorldLuck", Features.Luck1000 and 10 or 1) end)
-end)
+    --------------------------------------------------------------------------------
+    -- PLAYER HEALTH BAR GUI
+    --------------------------------------------------------------------------------
+    local HealthGui = Instance.new("ScreenGui")
+    HealthGui.Name = "SharkHubPlayerHPGui"
+    HealthGui.ResetOnSpawn = false
+    HealthGui.DisplayOrder = 110
+    HealthGui.Parent = PlayerGui
 
--- 18. AUTO ESCAPE (20% HP)
-safeBindClick(AutoEscapeBtn, function()
-    Features.AutoEscape = not Features.AutoEscape
-    updateStateUI(AutoEscapeBtn, AutoEscapeStroke, AutoEscapeGrad, Features.AutoEscape, "🚨 Auto Escape: ON", "🚨 Auto Escape (20% HP): OFF")
-    if Connections.AutoEscape then Connections.AutoEscape:Disconnect() Connections.AutoEscape = nil end
-    if Features.AutoEscape then
-        Connections.AutoEscape = RunService.Heartbeat:Connect(function()
+    local HealthFrame = Instance.new("Frame")
+    HealthFrame.Size = UDim2.new(0, 260, 0, 85)
+    HealthFrame.Position = UDim2.new(0.02, 0, 0.72, 0)
+    HealthFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
+    HealthFrame.Active = true
+    HealthFrame.ZIndex = 20
+    HealthFrame.Parent = HealthGui
+    Instance.new("UICorner", HealthFrame).CornerRadius = UDim.new(0, 12)
+    local HPFrameStroke = Instance.new("UIStroke", HealthFrame) HPFrameStroke.Thickness = 2 HPFrameStroke.Color = Color3.fromRGB(255, 110, 0)
+
+    makeDraggable(HealthFrame)
+
+    local HPHeader = Instance.new("Frame") HPHeader.Size = UDim2.new(1, 0, 0, 26) HPHeader.BackgroundTransparency = 1 HPHeader.ZIndex = 21 HPHeader.Parent = HealthFrame
+    local HPTitle = Instance.new("TextLabel") HPTitle.Size = UDim2.new(0.7, 0, 1, 0) HPTitle.Position = UDim2.new(0, 10, 0, 0) HPTitle.BackgroundTransparency = 1
+    HPTitle.Text = "🎃 PLAYER HEALTH" HPTitle.TextColor3 = Color3.fromRGB(255, 140, 0) HPTitle.Font = Enum.Font.GothamBold HPTitle.TextSize = 12 HPTitle.TextXAlignment = Enum.TextXAlignment.Left HPTitle.ZIndex = 21 HPTitle.Parent = HPHeader
+
+    local HPMinBtn = Instance.new("TextButton") HPMinBtn.Size = UDim2.new(0, 20, 0, 20) HPMinBtn.Position = UDim2.new(1, -48, 0, 3) HPMinBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 0) HPMinBtn.Text = "-" HPMinBtn.TextColor3 = Color3.new(1,1,1) HPMinBtn.Font = Enum.Font.GothamBold HPMinBtn.ZIndex = 22 HPMinBtn.Active = true HPMinBtn.Parent = HPHeader Instance.new("UICorner", HPMinBtn).CornerRadius = UDim.new(0, 5)
+    local HPCloseBtn = Instance.new("TextButton") HPCloseBtn.Size = UDim2.new(0, 20, 0, 20) HPCloseBtn.Position = UDim2.new(1, -24, 0, 3) HPCloseBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) HPCloseBtn.Text = "X" HPCloseBtn.TextColor3 = Color3.new(1,1,1) HPCloseBtn.Font = Enum.Font.GothamBold HPCloseBtn.ZIndex = 22 HPCloseBtn.Active = true HPCloseBtn.Parent = HPHeader Instance.new("UICorner", HPCloseBtn).CornerRadius = UDim.new(0, 5)
+
+    local HPContainer = Instance.new("Frame") HPContainer.Size = UDim2.new(1, -20, 0, 42) HPContainer.Position = UDim2.new(0, 10, 0, 32) HPContainer.BackgroundTransparency = 1 HPContainer.ZIndex = 21 HPContainer.Parent = HealthFrame
+
+    local HPBarBg = Instance.new("Frame") HPBarBg.Size = UDim2.new(1, 0, 0, 20) HPBarBg.Position = UDim2.new(0, 0, 0, 0) HPBarBg.BackgroundColor3 = Color3.fromRGB(40, 15, 50) HPBarBg.ZIndex = 21 HPBarBg.Parent = HPContainer Instance.new("UICorner", HPBarBg).CornerRadius = UDim.new(0, 6)
+    local HPBarFill = Instance.new("Frame") HPBarFill.Size = UDim2.new(1, 0, 1, 0) HPBarFill.BackgroundColor3 = Color3.fromRGB(255, 110, 0) HPBarFill.ZIndex = 22 HPBarFill.Parent = HPBarBg Instance.new("UICorner", HPBarFill).CornerRadius = UDim.new(0, 6)
+    local HPFillGrad = Instance.new("UIGradient") HPFillGrad.Color = ORANGE_ON_GRADIENT HPFillGrad.Parent = HPBarFill
+
+    local HPTextLabel = Instance.new("TextLabel") HPTextLabel.Size = UDim2.new(1, 0, 0, 18) HPTextLabel.Position = UDim2.new(0, 0, 0, 22) HPTextLabel.BackgroundTransparency = 1
+    HPTextLabel.Text = "100 / 100 HP (100%)" HPTextLabel.TextColor3 = Color3.fromRGB(255, 200, 120) HPTextLabel.Font = Enum.Font.GothamBold HPTextLabel.TextSize = 11 HPTextLabel.ZIndex = 22 HPTextLabel.Parent = HPContainer
+
+    safeBindClick(HPMinBtn, function()
+        HPContainer.Visible = not HPContainer.Visible
+        HealthFrame.Size = HPContainer.Visible and UDim2.new(0, 260, 0, 85) or UDim2.new(0, 260, 0, 28)
+        HPMinBtn.Text = HPContainer.Visible and "-" or "+"
+    end)
+    safeBindClick(HPCloseBtn, function() HealthFrame.Visible = false end)
+
+    Connections.PlayerHPTracker = RunService.Heartbeat:Connect(function()
+        if HealthFrame.Visible and HPContainer.Visible then
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hum and hrp and hum.MaxHealth > 0 and (hum.Health / hum.MaxHealth) <= 0.20 then
-                hrp.CFrame = hrp.CFrame + Vector3.new(0, 100, 0)
-                task.wait(1)
+            if hum then
+                local currentHP = math.clamp(hum.Health, 0, hum.MaxHealth)
+                local ratio = math.clamp(currentHP / math.max(hum.MaxHealth, 1), 0, 1)
+                TweenService:Create(HPBarFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(ratio, 0, 1, 0)}):Play()
+                HPTextLabel.Text = string.format("%d / %d HP (%d%%)", math.floor(currentHP), math.floor(hum.MaxHealth), math.floor(ratio * 100))
+            else
+                HPTextLabel.Text = "No Humanoid Found"
             end
-        end)
-    end
-end)
+        end
+    end)
 
--- 19. BRING RAKOOF
-safeBindClick(BringRakoofBtn, function()
-    Features.BringRakoof = not Features.BringRakoof
-    updateStateUI(BringRakoofBtn, BringRakoofStroke, BringRakoofGrad, Features.BringRakoof, "🧲 Bring Rakoof: ON", "🧲 Bring Rakoof: OFF")
-    if Connections.BringRakoof then Connections.BringRakoof:Disconnect() Connections.BringRakoof = nil end
-    if Features.BringRakoof then
-        Connections.BringRakoof = RunService.Heartbeat:Connect(function()
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local _, targetPart = findTargetModel(TARGET_NAME)
-            if hrp and targetPart then targetPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -3) end
-        end)
-    end
-end)
+    --------------------------------------------------------------------------------
+    -- SPEED GUI
+    --------------------------------------------------------------------------------
+    local SpeedGui = Instance.new("ScreenGui") SpeedGui.Name = "SharkHubSpeedGui" SpeedGui.ResetOnSpawn = false SpeedGui.DisplayOrder = 105 SpeedGui.Parent = PlayerGui
+    local SpeedFrame = Instance.new("Frame") SpeedFrame.Size = UDim2.new(0, 250, 0, 175) SpeedFrame.Position = UDim2.new(0.02, 0, 0.35, 0) SpeedFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) SpeedFrame.Active = true SpeedFrame.ZIndex = 15 SpeedFrame.Parent = SpeedGui Instance.new("UICorner", SpeedFrame).CornerRadius = UDim.new(0, 12)
+    local SpeedFrameStroke = Instance.new("UIStroke", SpeedFrame) SpeedFrameStroke.Thickness = 2 SpeedFrameStroke.Color = Color3.fromRGB(255, 110, 0)
 
--- 20. TOGGLE PLAYER HP GUI
-safeBindClick(ToggleHPGuiBtn, function()
-    HealthFrame.Visible = not HealthFrame.Visible
-    updateStateUI(ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad, HealthFrame.Visible, "🎃 TOGGLE PLAYER HP GUI: ON", "🎃 TOGGLE PLAYER HP GUI: OFF")
-end)
+    makeDraggable(SpeedFrame)
 
--- TOGGLE HUB VISIBILITY
-safeBindClick(ToggleIcon, function()
-    MainFrame.Visible = not MainFrame.Visible
-    RadarFrame.Visible = MainFrame.Visible
-    SpeedFrame.Visible = MainFrame.Visible
-end)
+    local SpeedTitleBar = Instance.new("TextLabel") SpeedTitleBar.Size = UDim2.new(1, 0, 0, 32) SpeedTitleBar.BackgroundTransparency = 1 SpeedTitleBar.Text = "⚡ SPEED CHARGER" SpeedTitleBar.TextColor3 = Color3.fromRGB(255, 140, 0) SpeedTitleBar.Font = Enum.Font.GothamBold SpeedTitleBar.TextSize = 13 SpeedTitleBar.ZIndex = 16 SpeedTitleBar.Parent = SpeedFrame
+    local SpeedInput = Instance.new("TextBox") SpeedInput.Size = UDim2.new(0.88, 0, 0, 32) SpeedInput.Position = UDim2.new(0.06, 0, 0.22, 0) SpeedInput.BackgroundColor3 = Color3.fromRGB(35, 15, 48) SpeedInput.Text = "50" SpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255) SpeedInput.Font = Enum.Font.GothamBold SpeedInput.TextSize = 13 SpeedInput.ZIndex = 16 SpeedInput.Active = true SpeedInput.Parent = SpeedFrame Instance.new("UICorner", SpeedInput).CornerRadius = UDim.new(0, 8)
+    local ApplySpeedBtn = Instance.new("TextButton") ApplySpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) ApplySpeedBtn.Position = UDim2.new(0.06, 0, 0.46, 0) ApplySpeedBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0) ApplySpeedBtn.Text = "⚡ APPLY SPEED" ApplySpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) ApplySpeedBtn.Font = Enum.Font.GothamBold ApplySpeedBtn.ZIndex = 16 ApplySpeedBtn.Active = true ApplySpeedBtn.Parent = SpeedFrame Instance.new("UICorner", ApplySpeedBtn).CornerRadius = UDim.new(0, 8)
+    local OffSpeedBtn = Instance.new("TextButton") OffSpeedBtn.Size = UDim2.new(0.88, 0, 0, 32) OffSpeedBtn.Position = UDim2.new(0.06, 0, 0.70, 0) OffSpeedBtn.BackgroundColor3 = Color3.fromRGB(100, 20, 20) OffSpeedBtn.Text = "🛑 RESET SPEED (16)" OffSpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255) OffSpeedBtn.Font = Enum.Font.GothamBold OffSpeedBtn.ZIndex = 16 OffSpeedBtn.Active = true OffSpeedBtn.Parent = SpeedFrame Instance.new("UICorner", OffSpeedBtn).CornerRadius = UDim.new(0, 8)
 
-Connections.ToggleKey = UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == TOGGLE_KEY and MainFrame then
-        MainFrame.Visible = not MainFrame.Visible
-        RadarFrame.Visible = MainFrame.Visible
-        SpeedFrame.Visible = MainFrame.Visible
-    end
-end)
+    safeBindClick(ApplySpeedBtn, function()
+        local val = tonumber(SpeedInput.Text)
+        if val then currentSetSpeed = val local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = val end ApplySpeedBtn.Text = "✅ SPEED SET: " .. val task.delay(1.5, function() ApplySpeedBtn.Text = "⚡ APPLY SPEED" end) end
+    end)
+    safeBindClick(OffSpeedBtn, function()
+        currentSetSpeed = nil local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = 16 end OffSpeedBtn.Text = "🔴 RESET TO 16" task.delay(1.5, function() OffSpeedBtn.Text = "🛑 RESET SPEED (16)" end)
+    end)
+    Connections.SpeedLock = RunService.Heartbeat:Connect(function()
+        if currentSetSpeed then local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum and hum.WalkSpeed ~= currentSetSpeed then hum.WalkSpeed = currentSetSpeed end end
+    end)
+
+    --------------------------------------------------------------------------------
+    -- RADAR & RAKOOF GRADIENT HP DETECTOR GUI
+    --------------------------------------------------------------------------------
+    local RadarFrame = Instance.new("Frame") RadarFrame.Size = UDim2.new(0, 280, 0, 185) RadarFrame.Position = UDim2.new(0.5, 390, 0.5, -92) RadarFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28) RadarFrame.Active = true RadarFrame.ZIndex = 15 RadarFrame.Parent = ScreenGui Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0, 12)
+    local RadarStroke = Instance.new("UIStroke", RadarFrame) RadarStroke.Thickness = 2 RadarStroke.Color = Color3.fromRGB(255, 110, 0)
+
+    makeDraggable(RadarFrame)
+
+    local RadarTitle = Instance.new("TextLabel") RadarTitle.Size = UDim2.new(1, -35, 0, 26) RadarTitle.Position = UDim2.new(0, 10, 0, 4) RadarTitle.BackgroundTransparency = 1 RadarTitle.Text = "🔮 DROP RADAR & RAKOOF HP" RadarTitle.TextColor3 = Color3.fromRGB(255, 140, 0) RadarTitle.Font = Enum.Font.GothamBold RadarTitle.TextSize = 12 RadarTitle.TextXAlignment = Enum.TextXAlignment.Left RadarTitle.ZIndex = 16 RadarTitle.Parent = RadarFrame
+
+    local RadarCloseBtn = Instance.new("TextButton") RadarCloseBtn.Size = UDim2.new(0, 20, 0, 20) RadarCloseBtn.Position = UDim2.new(1, -24, 0, 4) RadarCloseBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) RadarCloseBtn.Text = "X" RadarCloseBtn.TextColor3 = Color3.new(1, 1, 1) RadarCloseBtn.Font = Enum.Font.GothamBold RadarCloseBtn.ZIndex = 18 RadarCloseBtn.Parent = RadarFrame Instance.new("UICorner", RadarCloseBtn).CornerRadius = UDim.new(0, 5)
+    safeBindClick(RadarCloseBtn, function() RadarFrame.Visible = false end)
+
+    local DisplayCard = Instance.new("Frame") DisplayCard.Size = UDim2.new(1, -16, 0, 52) DisplayCard.Position = UDim2.new(0, 8, 0, 32) DisplayCard.BackgroundColor3 = Color3.fromRGB(40, 18, 55) DisplayCard.ZIndex = 16 DisplayCard.Parent = RadarFrame Instance.new("UICorner", DisplayCard).CornerRadius = UDim.new(0, 8)
+    local RadarItemName = Instance.new("TextLabel") RadarItemName.Size = UDim2.new(1, -12, 0, 20) RadarItemName.Position = UDim2.new(0, 8, 0, 4) RadarItemName.BackgroundTransparency = 1 RadarItemName.Text = "🎁 Searching drops..." RadarItemName.TextColor3 = Color3.fromRGB(255, 255, 255) RadarItemName.Font = Enum.Font.GothamBold RadarItemName.TextSize = 11 RadarItemName.TextXAlignment = Enum.TextXAlignment.Left RadarItemName.ZIndex = 17 RadarItemName.Parent = DisplayCard
+    local RadarItemInfo = Instance.new("TextLabel") RadarItemInfo.Size = UDim2.new(1, -12, 0, 18) RadarItemInfo.Position = UDim2.new(0, 8, 0, 26) RadarItemInfo.BackgroundTransparency = 1 RadarItemInfo.Text = "Dist: -- | Chance: --" RadarItemInfo.TextColor3 = Color3.fromRGB(255, 160, 30) RadarItemInfo.Font = Enum.Font.Gotham RadarItemInfo.TextSize = 10 RadarItemInfo.TextXAlignment = Enum.TextXAlignment.Left RadarItemInfo.ZIndex = 17 RadarItemInfo.Parent = DisplayCard
+
+    local RakoofCard = Instance.new("Frame") RakoofCard.Size = UDim2.new(1, -16, 0, 82) RakoofCard.Position = UDim2.new(0, 8, 0, 92) RakoofCard.BackgroundColor3 = Color3.fromRGB(40, 12, 28) RakoofCard.ZIndex = 16 RakoofCard.Parent = RadarFrame Instance.new("UICorner", RakoofCard).CornerRadius = UDim.new(0, 8)
+    local RakoofCardStroke = Instance.new("UIStroke", RakoofCard) RakoofCardStroke.Thickness = 1.5 RakoofCardStroke.Color = Color3.fromRGB(200, 50, 50)
+
+    local RakoofTitle = Instance.new("TextLabel") RakoofTitle.Size = UDim2.new(1, -12, 0, 18) RakoofTitle.Position = UDim2.new(0, 8, 0, 4) RakoofTitle.BackgroundTransparency = 1 RakoofTitle.Text = "👹 RAKOOF (DOOFMMY) HP DETECTOR" RakoofTitle.TextColor3 = Color3.fromRGB(255, 90, 90) RakoofTitle.Font = Enum.Font.GothamBold RakoofTitle.TextSize = 11 RakoofTitle.TextXAlignment = Enum.TextXAlignment.Left RakoofTitle.ZIndex = 17 RakoofTitle.Parent = RakoofCard
+
+    local RakoofBarBg = Instance.new("Frame") Rako
