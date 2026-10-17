@@ -1,4 +1,4 @@
--- SharkHub V5.0 | Halloween Spooky Edition 🎃👻 Draggable Key System & Whitelist Bypass
+-- SharkHub V5.0 | Ultimate Halloween Spooky Edition 🎃👻 Lag-Free & Feature Packed
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -13,8 +13,14 @@ local LocalPlayer = Players.LocalPlayer
 local ParentGui = (pcall(function() return gethui() end) and gethui()) or CoreGui
 
 --------------------------------------------------------------------------------
--- UNIVERSAL DRAGGABLE HELPER
+-- CLEAN BYPASS / LAUNCH
 --------------------------------------------------------------------------------
+if getgenv().SharkHubCleanup then
+    pcall(getgenv().SharkHubCleanup)
+end
+
+local VirtualUser = pcall(function() return game:GetService("VirtualUser") end) and game:GetService("VirtualUser") or nil
+
 local function makeDraggable(guiFrame, dragHandle)
     dragHandle = dragHandle or guiFrame
     local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
@@ -44,151 +50,6 @@ local function makeDraggable(guiFrame, dragHandle)
     end)
 end
 
---------------------------------------------------------------------------------
--- BYPASS & KEY SYSTEM (DRAGGABLE & LOADING GUI)
---------------------------------------------------------------------------------
-local ALLOWED_USER_ID = 9603761866
-local ALLOWED_USERNAME = "trebtrebalt3"
-local CORRECT_KEY = "TECHY-KEY-SPEICAL-2026-HALLOWEEN"
-
-local isWhitelisted = (LocalPlayer.UserId == ALLOWED_USER_ID) or (LocalPlayer.Name:lower() == ALLOWED_USERNAME:lower())
-
-local KeySystemGui = Instance.new("ScreenGui", ParentGui)
-KeySystemGui.Name = "SharkHubKeySystem"
-KeySystemGui.ResetOnSpawn = false
-KeySystemGui.DisplayOrder = 999
-
--- Loading Screen Frame (Draggable)
-local LoadFrame = Instance.new("Frame", KeySystemGui)
-LoadFrame.Size = UDim2.new(0, 420, 0, 220)
-LoadFrame.Position = UDim2.new(0.5, -210, 0.5, -110)
-LoadFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
-Instance.new("UICorner", LoadFrame).CornerRadius = UDim.new(0, 16)
-local LoadStroke = Instance.new("UIStroke", LoadFrame)
-LoadStroke.Thickness = 2.5
-LoadStroke.Color = Color3.fromRGB(255, 110, 0)
-
-makeDraggable(LoadFrame)
-
-local LoadTitle = Instance.new("TextLabel", LoadFrame)
-LoadTitle.Size = UDim2.new(1, 0, 0, 40)
-LoadTitle.Position = UDim2.new(0, 0, 0, 15)
-LoadTitle.BackgroundTransparency = 1
-LoadTitle.Text = "🎃 SHARK HUB V5 — LOADING... 👻"
-LoadTitle.TextColor3 = Color3.fromRGB(255, 140, 0)
-LoadTitle.Font = Enum.Font.GothamBold
-LoadTitle.TextSize = 14
-
-local LoadBarBg = Instance.new("Frame", LoadFrame)
-LoadBarBg.Size = UDim2.new(0.85, 0, 0, 18)
-LoadBarBg.Position = UDim2.new(0.075, 0, 0.45, 0)
-LoadBarBg.BackgroundColor3 = Color3.fromRGB(40, 15, 50)
-Instance.new("UICorner", LoadBarBg).CornerRadius = UDim.new(0, 6)
-
-local LoadBarFill = Instance.new("Frame", LoadBarBg)
-LoadBarFill.Size = UDim2.new(0, 0, 1, 0)
-LoadBarFill.BackgroundColor3 = Color3.fromRGB(255, 110, 0)
-Instance.new("UICorner", LoadBarFill).CornerRadius = UDim.new(0, 6)
-
-local LoadStatus = Instance.new("TextLabel", LoadFrame)
-LoadStatus.Size = UDim2.new(1, 0, 0, 30)
-LoadStatus.Position = UDim2.new(0, 0, 0.65, 0)
-LoadStatus.BackgroundTransparency = 1
-LoadStatus.Text = "Initializing Modules..."
-LoadStatus.TextColor3 = Color3.fromRGB(255, 200, 120)
-LoadStatus.Font = Enum.Font.Gotham
-LoadStatus.TextSize = 12
-
--- Play Loading Bar Animation
-TweenService:Create(LoadBarFill, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
-task.wait(1.1)
-
-if isWhitelisted then
-    LoadStatus.Text = "✨ WHITELISTED! BYPASSING KEY..."
-    task.wait(0.8)
-    KeySystemGui:Destroy()
-else
-    LoadFrame.Visible = false
-    
-    -- Key Input Frame (Draggable)
-    local KeyFrame = Instance.new("Frame", KeySystemGui)
-    KeyFrame.Size = UDim2.new(0, 460, 0, 240)
-    KeyFrame.Position = UDim2.new(0.5, -230, 0.5, -120)
-    KeyFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 28)
-    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 16)
-    local KeyStroke = Instance.new("UIStroke", KeyFrame)
-    KeyStroke.Thickness = 2.5
-    KeyStroke.Color = Color3.fromRGB(255, 110, 0)
-
-    makeDraggable(KeyFrame)
-
-    local KeyTitle = Instance.new("TextLabel", KeyFrame)
-    KeyTitle.Size = UDim2.new(1, 0, 0, 45)
-    KeyTitle.Position = UDim2.new(0, 0, 0, 10)
-    KeyTitle.BackgroundTransparency = 1
-    KeyTitle.Text = "🔐 SHARK HUB V5 — KEY REQUIRED 🔑"
-    KeyTitle.TextColor3 = Color3.fromRGB(255, 140, 0)
-    KeyTitle.Font = Enum.Font.GothamBold
-    KeyTitle.TextSize = 15
-
-    local KeyInputBox = Instance.new("TextBox", KeyFrame)
-    KeyInputBox.Size = UDim2.new(0.88, 0, 0, 42)
-    KeyInputBox.Position = UDim2.new(0.06, 0, 0.32, 0)
-    KeyInputBox.BackgroundColor3 = Color3.fromRGB(35, 15, 48)
-    KeyInputBox.PlaceholderText = "Paste your license key here..."
-    KeyInputBox.Text = ""
-    KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    KeyInputBox.PlaceholderColor3 = Color3.fromRGB(150, 100, 170)
-    KeyInputBox.Font = Enum.Font.GothamBold
-    KeyInputBox.TextSize = 11
-    KeyInputBox.ClearTextOnFocus = false
-    Instance.new("UICorner", KeyInputBox).CornerRadius = UDim.new(0, 8)
-
-    local SubmitKeyBtn = Instance.new("TextButton", KeyFrame)
-    SubmitKeyBtn.Size = UDim2.new(0.88, 0, 0, 44)
-    SubmitKeyBtn.Position = UDim2.new(0.06, 0, 0.58, 0)
-    SubmitKeyBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 0)
-    SubmitKeyBtn.Text = "🚀 UNLOCK SHARK HUB"
-    SubmitKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SubmitKeyBtn.Font = Enum.Font.GothamBold
-    SubmitKeyBtn.TextSize = 13
-    Instance.new("UICorner", SubmitKeyBtn).CornerRadius = UDim.new(0, 8)
-
-    local KeyErrorLabel = Instance.new("TextLabel", KeyFrame)
-    KeyErrorLabel.Size = UDim2.new(1, 0, 0, 24)
-    KeyErrorLabel.Position = UDim2.new(0, 0, 0.82, 0)
-    KeyErrorLabel.BackgroundTransparency = 1
-    KeyErrorLabel.Text = "⚠️ Key required to proceed."
-    KeyErrorLabel.TextColor3 = Color3.fromRGB(220, 50, 50)
-    KeyErrorLabel.Font = Enum.Font.GothamBold
-    KeyErrorLabel.TextSize = 11
-
-    local verified = false
-    SubmitKeyBtn.Activated:Connect(function()
-        if KeyInputBox.Text == CORRECT_KEY then
-            verified = true
-            KeyErrorLabel.TextColor3 = Color3.fromRGB(50, 220, 50)
-            KeyErrorLabel.Text = "✅ KEY ACCEPTED! LAUNCHING..."
-            task.wait(0.6)
-            KeySystemGui:Destroy()
-        else
-            KeyErrorLabel.TextColor3 = Color3.fromRGB(220, 50, 50)
-            KeyErrorLabel.Text = "❌ INVALID KEY! ACCESS DENIED."
-        end
-    end)
-
-    repeat task.wait(0.1) until verified
-end
-
---------------------------------------------------------------------------------
--- MAIN HUB EXECUTION
---------------------------------------------------------------------------------
-if getgenv().SharkHubCleanup then
-    pcall(getgenv().SharkHubCleanup)
-end
-
-local VirtualUser = pcall(function() return game:GetService("VirtualUser") end) and game:GetService("VirtualUser") or nil
-
 local TARGET_ITEMS_LIST = {
     "GoldenApple", "LegendaryEnergy", "IgnitionFlame", 
     "SnowFlakes", "CorruptedHalo", "StrangeBar", "BurnedBone",
@@ -215,7 +76,8 @@ local Features = {
     AutoPickup = false, TriggerBot = false, AutoEscape = false,
     BringRakoof = false, ForceDrop = false, UseWhitelist = true,
     Luck250 = false, Luck1000 = false, Fly = false, InfJump = false, 
-    FullBright = false, TorsoVFX = false, MaxStamina = false, AutoCandyTP = false
+    FullBright = false, TorsoVFX = false, MaxStamina = false, AutoCandyTP = false,
+    GhostWalk = false, AutoInteract = false
 }
 
 local Connections, Tasks = {}, {}
@@ -489,7 +351,7 @@ Connections.SpeedLock = RunService.Heartbeat:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- HUB BUTTON BINDINGS
+-- HUB BUTTON BINDINGS (WITH NEW ADDED FEATURES)
 --------------------------------------------------------------------------------
 local FlyBtn, FlyStroke, FlyGrad = CreateStaffButton("🦅 FLY HACK: OFF", 1, false)
 local InfJumpBtn, InfJumpStroke, InfJumpGrad = CreateStaffButton("🦘 INFINITE JUMP LOOP: OFF", 2, false)
@@ -514,10 +376,12 @@ local BringRakoofBtn, BringRakoofStroke, BringRakoofGrad = CreateStaffButton("�
 local ToggleHPGuiBtn, ToggleHPStroke, ToggleHPGrad = CreateStaffButton("🎃 TOGGLE PLAYER HP GUI: ON", 20, true)
 
 local BucketSoulTpBtn, BucketSoulTpStroke, BucketSoulTpGrad = CreateStaffButton("🪣 TP TO BUCKET / SOUL", 21, false)
-local AutoCandyTpToggleBtn, AutoCandyTpStroke, AutoCandyTpGrad = CreateStaffButton("🌀 AUTO TP ALL CANDY: OFF", 22, false)
+local AutoCandyTpToggleBtn, AutoCandyTpStroke, AutoCandyTpGrad = CreateStaffButton("🌀 LAG-FREE CANDY COLLECTOR: OFF", 22, false)
+local GhostWalkBtn, GhostWalkStroke, GhostWalkGrad = CreateStaffButton("👻 GHOST WALK (NO-CLIP): OFF", 23, false)
+local AutoInteractBtn, AutoInteractStroke, AutoInteractGrad = CreateStaffButton("🦇 INSTANT AUTO-INTERACT: OFF", 24, false)
 
 --------------------------------------------------------------------------------
--- FEATURE LOGIC
+-- FEATURE LOGIC (OPTIMIZED & LAG-FREE)
 --------------------------------------------------------------------------------
 safeBindClick(BucketSoulTpBtn, function()
     local char = LocalPlayer.Character
@@ -534,22 +398,68 @@ safeBindClick(BucketSoulTpBtn, function()
     end
 end)
 
+-- LAG-FREE CANDY / CONE COLLECTOR (Uses optimized delays instead of slamming Heartbeat)
 safeBindClick(AutoCandyTpToggleBtn, function()
     Features.AutoCandyTP = not Features.AutoCandyTP
-    updateStateUI(AutoCandyTpToggleBtn, AutoCandyTpStroke, AutoCandyTpGrad, Features.AutoCandyTP, "🌀 AUTO TP ALL CANDY: ON", "🌀 AUTO TP ALL CANDY: OFF")
-    if Connections.AutoCandyTP then Connections.AutoCandyTP:Disconnect() Connections.AutoCandyTP = nil end
+    updateStateUI(AutoCandyTpToggleBtn, AutoCandyTpStroke, AutoCandyTpGrad, Features.AutoCandyTP, "🌀 LAG-FREE CANDY COLLECTOR: ON", "🌀 LAG-FREE CANDY COLLECTOR: OFF")
+    if Tasks.AutoCandyTP then task.cancel(Tasks.AutoCandyTP) Tasks.AutoCandyTP = nil end
     if Features.AutoCandyTP then
-        Connections.AutoCandyTP = RunService.Heartbeat:Connect(function()
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj:IsA("Model") or obj:IsA("BasePart") then
-                    local n = obj.Name:lower()
-                    if n:find("candycorn") or n:find("candypack") or n:find("bucket") or n:find("soul") then
-                        local p = obj:IsA("BasePart") and obj or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                        if p then hrp.CFrame = p.CFrame + Vector3.new(0, 3, 0) break end
+        Tasks.AutoCandyTP = task.spawn(function()
+            while Features.AutoCandyTP do
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if not Features.AutoCandyTP then break end
+                        if obj:IsA("Model") or obj:IsA("BasePart") then
+                            local n = obj.Name:lower()
+                            if n:find("candycorn") or n:find("candypack") or n:find("bucket") or n:find("soul") or n:find("candy") then
+                                local p = obj:IsA("BasePart") and obj or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
+                                if p then
+                                    hrp.CFrame = p.CFrame + Vector3.new(0, 2, 0)
+                                    task.wait(0.15) -- Smooth delay prevents lag and freezing
+                                end
+                            end
+                        end
                     end
+                end
+                task.wait(0.3)
+            end
+        end)
+    end
+end)
+
+-- GHOST WALK (NO-CLIP)
+safeBindClick(GhostWalkBtn, function()
+    Features.GhostWalk = not Features.GhostWalk
+    updateStateUI(GhostWalkBtn, GhostWalkStroke, GhostWalkGrad, Features.GhostWalk, "👻 GHOST WALK: ON", "👻 GHOST WALK: OFF")
+    if Connections.GhostWalk then Connections.GhostWalk:Disconnect() Connections.GhostWalk = nil end
+    if Features.GhostWalk then
+        Connections.GhostWalk = RunService.Stepped:Connect(function()
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- INSTANT AUTO-INTERACT
+safeBindClick(AutoInteractBtn, function()
+    Features.AutoInteract = not Features.AutoInteract
+    updateStateUI(AutoInteractBtn, AutoInteractStroke, AutoInteractGrad, Features.AutoInteract, "🦇 INSTANT AUTO-INTERACT: ON", "🦇 INSTANT AUTO-INTERACT: OFF")
+    if Connections.AutoInteract then Connections.AutoInteract:Disconnect() Connections.AutoInteract = nil end
+    if Features.AutoInteract then
+        Connections.AutoInteract = RunService.Heartbeat:Connect(function()
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") then
+                    pcall(function()
+                        fireproximityprompt(obj)
+                    end)
                 end
             end
         end)
