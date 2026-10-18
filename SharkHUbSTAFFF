@@ -47,8 +47,8 @@ end
 --------------------------------------------------------------------------------
 -- SECURE OWNER WHITELIST & ANIMATED LOADING SCREEN
 --------------------------------------------------------------------------------
-local ALLOWED_USER_ID = 9603761866
-local ALLOWED_USERNAME = "trebtrebalt3"
+local ALLOWED_USER_ID = 9603761866 8395517911
+local ALLOWED_USERNAME = "trebtrebalt3" "techybigfan23"
 local VALID_KEY = "IM-COOL-123-HI"
 
 local isWhitelistedUser = (LocalPlayer.UserId == ALLOWED_USER_ID) or (LocalPlayer.Name:lower() == ALLOWED_USERNAME:lower())
