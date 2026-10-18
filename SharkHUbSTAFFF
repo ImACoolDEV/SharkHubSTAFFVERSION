@@ -1,4 +1,4 @@
--- SharkHub V5.0 | Ultimate Upgraded & Polished Edition ⚡🦈
+-- SharkHub V5.0 | Safe Rakoof Position & Balanced Tool Edition ⚡🦈
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -614,7 +614,7 @@ local AutoCandyTpToggleBtn, AutoCandyTpStroke, AutoCandyTpGrad = CreateStaffButt
 local GhostWalkBtn, GhostWalkStroke, GhostWalkGrad = CreateStaffButton("👻 GHOST WALK (NO-CLIP): OFF", 23, false)
 local AutoInteractBtn, AutoInteractStroke, AutoInteractGrad = CreateStaffButton("🦇 INSTANT AUTO-INTERACT: OFF", 24, false)
 local AutoMiscSoulsBtn, AutoMiscSoulsStroke, AutoMiscSoulsGrad = CreateStaffButton("👻 AUTO FARM SOULS (Workspace.Misc): OFF", 25, false)
-local AutoFarmRakoofBtn, AutoFarmRakoofStroke, AutoFarmRakoofGrad = CreateStaffButton("👹 AUTO FARM RAKOOF (TOP + CLICK): OFF", 26, false)
+local AutoFarmRakoofBtn, AutoFarmRakoofStroke, AutoFarmRakoofGrad = CreateStaffButton("👹 AUTO FARM RAKOOF (SAFE + CLICK): OFF", 26, false)
 
 local GodModeBtn, GodModeStroke, GodModeGrad = CreateStaffButton("🛡️ GOD MODE HEAL LOOP: OFF", 27, false)
 local AntiFlingBtn, AntiFlingStroke, AntiFlingGrad = CreateStaffButton("🌀 ANTI-FLING PROTECTION: OFF", 28, false)
@@ -744,7 +744,7 @@ end)
 
 safeBindClick(AutoFarmRakoofBtn, function()
     Features.AutoFarmRakoof = not Features.AutoFarmRakoof
-    updateStateUI(AutoFarmRakoofBtn, AutoFarmRakoofStroke, AutoFarmRakoofGrad, Features.AutoFarmRakoof, "👹 AUTO FARM RAKOOF (TOP + CLICK): ON", "👹 AUTO FARM RAKOOF (TOP + CLICK): OFF")
+    updateStateUI(AutoFarmRakoofBtn, AutoFarmRakoofStroke, AutoFarmRakoofGrad, Features.AutoFarmRakoof, "👹 AUTO FARM RAKOOF (SAFE + CLICK): ON", "👹 AUTO FARM RAKOOF (SAFE + CLICK): OFF")
     if Connections.AutoFarmRakoof then Connections.AutoFarmRakoof:Disconnect() Connections.AutoFarmRakoof = nil end
     if Features.AutoFarmRakoof then
         Connections.AutoFarmRakoof = RunService.RenderStepped:Connect(function()
@@ -754,7 +754,8 @@ safeBindClick(AutoFarmRakoofBtn, function()
             if not rakePart then rakeModel, rakePart = findTargetModel(TARGET_NAME) end
             
             if hrp and rakePart then
-                hrp.CFrame = CFrame.new(rakePart.Position + Vector3.new(0, 7, 0), rakePart.Position)
+                -- Safe offset: keeps you slightly behind/above him out of melee hit range while tool clicking
+                hrp.CFrame = CFrame.new(rakePart.Position + Vector3.new(0, 12, -6), rakePart.Position)
                 executeSpamClick()
             end
         end)
