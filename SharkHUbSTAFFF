@@ -1,4 +1,4 @@
--- SharkHub V5.0 | Fixed High-Visibility & Custom Key Edition ⚡🤖
+-- SharkHub V5.0 | Animated Loading, Smooth UI, & The_Rake ESP Edition ⚡🦈
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -45,88 +45,146 @@ local function makeDraggable(guiFrame, dragHandle)
 end
 
 --------------------------------------------------------------------------------
--- CUSTOM KEY SYSTEM (KEY: IM-COOL-123-HI)
+-- SECURE OWNER WHITELIST & ANIMATED LOADING SCREEN
 --------------------------------------------------------------------------------
+local ALLOWED_USER_ID = 9603761866
+local ALLOWED_USERNAME = "trebtrebalt3"
 local VALID_KEY = "IM-COOL-123-HI"
 
-local KeySystemGui = Instance.new("ScreenGui", ParentGui)
-KeySystemGui.Name = "SharkHubKeySystem"
-KeySystemGui.ResetOnSpawn = false
-KeySystemGui.DisplayOrder = 999
+local isWhitelistedUser = (LocalPlayer.UserId == ALLOWED_USER_ID) or (LocalPlayer.Name:lower() == ALLOWED_USERNAME:lower())
 
-local KeyFrame = Instance.new("Frame", KeySystemGui)
-KeyFrame.Size = UDim2.new(0, 480, 0, 260)
-KeyFrame.Position = UDim2.new(0.5, -240, 0.5, -130)
-KeyFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 10)
-local KeyStroke = Instance.new("UIStroke", KeyFrame)
-KeyStroke.Thickness = 2.5
-KeyStroke.Color = Color3.fromRGB(0, 255, 200)
+local LoadScreenGui = Instance.new("ScreenGui", ParentGui)
+LoadScreenGui.Name = "SharkHubLoading"
+LoadScreenGui.ResetOnSpawn = false
+LoadScreenGui.DisplayOrder = 999
 
-makeDraggable(KeyFrame)
+local LoadFrame = Instance.new("Frame", LoadScreenGui)
+LoadFrame.Size = UDim2.new(0, 480, 0, 260)
+LoadFrame.Position = UDim2.new(0.5, -240, 0.5, -130)
+LoadFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+LoadFrame.BackgroundTransparency = 1
+LoadFrame.Size = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", LoadFrame).CornerRadius = UDim.new(0, 14)
+local LoadStroke = Instance.new("UIStroke", LoadFrame)
+LoadStroke.Thickness = 2.5
+LoadStroke.Color = Color3.fromRGB(0, 255, 200)
 
-local KeyTitle = Instance.new("TextLabel", KeyFrame)
-KeyTitle.Size = UDim2.new(1, 0, 0, 50)
-KeyTitle.Position = UDim2.new(0, 0, 0, 10)
-KeyTitle.BackgroundTransparency = 1
-KeyTitle.Text = "🔐 SHARK HUB V5 — SECURITY GATEWAY 🔐"
-KeyTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
-KeyTitle.Font = Enum.Font.GothamBold
-KeyTitle.TextSize = 14
+TweenService:Create(LoadFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 480, 0, 260),
+    BackgroundTransparency = 0
+}):Play()
 
-local StatusLabel = Instance.new("TextLabel", KeyFrame)
+makeDraggable(LoadFrame)
+
+local LoadTitle = Instance.new("TextLabel", LoadFrame)
+LoadTitle.Size = UDim2.new(1, 0, 0, 50)
+LoadTitle.Position = UDim2.new(0, 0, 0, 10)
+LoadTitle.BackgroundTransparency = 1
+LoadTitle.Text = "🦈 SHARK HUB V5 — INITIALIZING 🦈"
+LoadTitle.TextColor3 = Color3.fromRGB(0, 255, 200)
+LoadTitle.Font = Enum.Font.GothamBold
+LoadTitle.TextSize = 14
+
+local BarBg = Instance.new("Frame", LoadFrame)
+BarBg.Size = UDim2.new(0.88, 0, 0, 14)
+BarBg.Position = UDim2.new(0.06, 0, 0.3, 0)
+BarBg.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+Instance.new("UICorner", BarBg).CornerRadius = UDim.new(0, 6)
+
+local BarFill = Instance.new("Frame", BarBg)
+BarFill.Size = UDim2.new(0, 0, 1, 0)
+BarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
+Instance.new("UICorner", BarFill).CornerRadius = UDim.new(0, 6)
+
+local StatusLabel = Instance.new("TextLabel", LoadFrame)
 StatusLabel.Size = UDim2.new(1, 0, 0, 30)
-StatusLabel.Position = UDim2.new(0, 0, 0.26, 0)
+StatusLabel.Position = UDim2.new(0, 0, 0.42, 0)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Enter Key to Initialize Modules:"
+StatusLabel.Text = "Connecting to Neural Core..."
 StatusLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.TextSize = 12
 
-local KeyInputBox = Instance.new("TextBox", KeyFrame)
-KeyInputBox.Size = UDim2.new(0.88, 0, 0, 45)
-KeyInputBox.Position = UDim2.new(0.06, 0, 0.42, 0)
+local KeyInputBox = Instance.new("TextBox", LoadFrame)
+KeyInputBox.Size = UDim2.new(0.88, 0, 0, 42)
+KeyInputBox.Position = UDim2.new(0.06, 0, 0.54, 0)
 KeyInputBox.BackgroundColor3 = Color3.fromRGB(25, 25, 38)
-KeyInputBox.PlaceholderText = "Type key here (IM-COOL-123-HI)..."
+KeyInputBox.PlaceholderText = "Enter private key..."
 KeyInputBox.Text = ""
 KeyInputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 KeyInputBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 160)
 KeyInputBox.Font = Enum.Font.GothamBold
 KeyInputBox.TextSize = 13
 KeyInputBox.ClearTextOnFocus = false
+KeyInputBox.Visible = false
 Instance.new("UICorner", KeyInputBox).CornerRadius = UDim.new(0, 8)
-local InputStroke = Instance.new("UIStroke", KeyInputBox)
-InputStroke.Color = Color3.fromRGB(0, 255, 200)
 
-local SubmitKeyBtn = Instance.new("TextButton", KeyFrame)
-SubmitKeyBtn.Size = UDim2.new(0.88, 0, 0, 45)
-SubmitKeyBtn.Position = UDim2.new(0.06, 0, 0.68, 0)
-SubmitKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 140)
-SubmitKeyBtn.Text = "🚀 VERIFY & LAUNCH HUB"
-SubmitKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SubmitKeyBtn.Font = Enum.Font.GothamBold
-SubmitKeyBtn.TextSize = 13
-Instance.new("UICorner", SubmitKeyBtn).CornerRadius = UDim.new(0, 8)
-
-local authenticated = false
-
-SubmitKeyBtn.Activated:Connect(function()
-    if KeyInputBox.Text == VALID_KEY then
-        StatusLabel.TextColor3 = Color3.fromRGB(50, 255, 100)
-        StatusLabel.Text = "✅ KEY ACCEPTED! LOADING..."
-        task.wait(0.5)
-        KeySystemGui:Destroy()
-        authenticated = true
-    else
-        StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
-        StatusLabel.Text = "❌ INVALID KEY! USE: IM-COOL-123-HI"
+KeyInputBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local t = KeyInputBox.Text
+    if t ~= "" and not t:match("^•+$") then
+        KeyInputBox.Text = string.rep("•", utf8.len(t))
     end
 end)
 
-repeat task.wait(0.1) until authenticated
+local SubmitKeyBtn = Instance.new("TextButton", LoadFrame)
+SubmitKeyBtn.Size = UDim2.new(0.88, 0, 0, 42)
+SubmitKeyBtn.Position = UDim2.new(0.06, 0, 0.76, 0)
+SubmitKeyBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 140)
+SubmitKeyBtn.Text = "🚀 VERIFY & LAUNCH"
+SubmitKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitKeyBtn.Font = Enum.Font.GothamBold
+SubmitKeyBtn.TextSize = 13
+SubmitKeyBtn.Visible = false
+Instance.new("UICorner", SubmitKeyBtn).CornerRadius = UDim.new(0, 8)
+
+local steps = {
+    {text = "Bypassing Client Anti-Cheat Hooks...", progress = 0.3},
+    {text = "Loading Workspace & Combat Modules...", progress = 0.7},
+    {text = "Verifying Security Access...", progress = 1.0}
+}
+
+for _, step in ipairs(steps) do
+    StatusLabel.Text = step.text
+    TweenService:Create(BarFill, TweenInfo.new(0.3), {Size = UDim2.new(step.progress, 0, 1, 0)}):Play()
+    task.wait(0.35)
+end
+
+local authenticated = false
+
+if isWhitelistedUser then
+    StatusLabel.TextColor3 = Color3.fromRGB(50, 255, 100)
+    StatusLabel.Text = "✨ WELCOME BACK, TREBTREBALT3!"
+    task.wait(0.5)
+    TweenService:Create(LoadFrame, TweenInfo.new(0.3), {Size = UDim2.new(0,0,0,0), BackgroundTransparency = 1}):Play()
+    task.wait(0.3)
+    LoadScreenGui:Destroy()
+    authenticated = true
+else
+    BarBg.Visible = false
+    StatusLabel.Text = "⚠️ Private Key Required for External Users"
+    KeyInputBox.Visible = true
+    SubmitKeyBtn.Visible = true
+
+    SubmitKeyBtn.Activated:Connect(function()
+        if #KeyInputBox.Text == #VALID_KEY then
+            StatusLabel.TextColor3 = Color3.fromRGB(50, 255, 100)
+            StatusLabel.Text = "✅ KEY ACCEPTED! LAUNCHING..."
+            task.wait(0.4)
+            TweenService:Create(LoadFrame, TweenInfo.new(0.3), {Size = UDim2.new(0,0,0,0), BackgroundTransparency = 1}):Play()
+            task.wait(0.3)
+            LoadScreenGui:Destroy()
+            authenticated = true
+        else
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+            StatusLabel.Text = "❌ INVALID KEY! ACCESS DENIED."
+        end
+    end)
+
+    repeat task.wait(0.1) until authenticated
+end
 
 --------------------------------------------------------------------------------
--- MAIN HUB EXECUTION
+-- MAIN HUB EXECUTION & ANIMATED GUI CREATION
 --------------------------------------------------------------------------------
 if getgenv().SharkHubCleanup then
     pcall(getgenv().SharkHubCleanup)
@@ -140,7 +198,6 @@ local TARGET_ITEMS_LIST = {
     "Penguin", "PenguinPart", "PenguinParts", "Mesh", "Meshes",
     "CrucibleSword", "Imposta", "NullBlock", "TrainerCap", "SlashProjectile2"
 }
-
 local TARGET_ITEMS_LOOKUP = {}
 for _, item in ipairs(TARGET_ITEMS_LIST) do TARGET_ITEMS_LOOKUP[item:lower()] = true end
 
@@ -155,7 +212,8 @@ local Features = {
     BringRakoof = false, ForceDrop = false, UseWhitelist = true,
     Luck250 = false, Luck1000 = false, Fly = false, InfJump = false, 
     FullBright = false, TorsoVFX = false, MaxStamina = false, AutoCandyTP = false,
-    GhostWalk = false, AutoInteract = false, AutoMiscSouls = false, AutoFarmRakoof = false
+    GhostWalk = false, AutoInteract = false, AutoMiscSouls = false, AutoFarmRakoof = false,
+    GodMode = false, AntiFling = false, PlayerESP = false, RakeESP = false
 }
 
 local Connections, Tasks = {}, {}
@@ -182,9 +240,9 @@ getgenv().SharkHubCleanup = function()
     if ParentGui:FindFirstChild("SharkHubSpeedGui") then ParentGui.SharkHubSpeedGui:Destroy() end
     if ParentGui:FindFirstChild("SharkHubPlayerHPGui") then ParentGui.SharkHubPlayerHPGui:Destroy() end
     if ParentGui:FindFirstChild("SharkHubRakeHPGui") then ParentGui.SharkHubRakeHPGui:Destroy() end
+    if ParentGui:FindFirstChild("SharkHubRakeESPGui") then ParentGui.SharkHubRakeESPGui:Destroy() end
 end
 
--- High-Visibility Color Gradients
 local OFF_GRADIENT = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 45)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 30))
@@ -266,7 +324,7 @@ local function safeBindClick(button, callback)
 end
 
 --------------------------------------------------------------------------------
--- HIGH-VISIBILITY MAIN GUI CREATION
+-- MAIN HUB CREATION WITH ANIMATIONS
 --------------------------------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui", ParentGui)
 ScreenGui.Name = "SharkHubStaffGui"
@@ -295,6 +353,9 @@ MainFrame.ZIndex = 10
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 local MainStroke = Instance.new("UIStroke", MainFrame) MainStroke.Thickness = 2.5 MainStroke.Color = Color3.fromRGB(0, 255, 200)
 
+MainFrame.Size = UDim2.new(0, 0, 0, 0)
+TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 780, 0, 520)}):Play()
+
 local TitleBar = Instance.new("Frame", MainFrame)
 TitleBar.Size = UDim2.new(1, 0, 0, 54)
 TitleBar.BackgroundColor3 = Color3.fromRGB(22, 22, 34)
@@ -305,7 +366,7 @@ makeDraggable(MainFrame, TitleBar)
 
 local TitleText = Instance.new("TextLabel", TitleBar)
 TitleText.Size = UDim2.new(0.65, 0, 1, 0) TitleText.Position = UDim2.new(0, 18, 0, 0) TitleText.BackgroundTransparency = 1
-TitleText.Text = "🦈 SHARK HUB V5 — HIGH VISIBILITY EDITION" TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Text = "🦈 SHARK HUB V5 — THE_RAKE ESP EDITION" TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.Font = Enum.Font.GothamBold TitleText.TextSize = 14 TitleText.TextXAlignment = Enum.TextXAlignment.Left TitleText.ZIndex = 12
 
 local MinimizeBtn = Instance.new("TextButton", TitleBar) MinimizeBtn.Size = UDim2.new(0, 32, 0, 32) MinimizeBtn.Position = UDim2.new(1, -82, 0.5, -16)
@@ -323,10 +384,15 @@ ScrollingFrame.ZIndex = 11 ScrollingFrame.Active = true ScrollingFrame.ClipsDesc
 
 safeBindClick(MinimizeBtn, function()
     ScrollingFrame.Visible = not ScrollingFrame.Visible
-    MainFrame.Size = ScrollingFrame.Visible and UDim2.new(0, 780, 0, 520) or UDim2.new(0, 780, 0, 54)
+    local targetSize = ScrollingFrame.Visible and UDim2.new(0, 780, 0, 520) or UDim2.new(0, 780, 0, 54)
+    TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize}):Play()
     MinimizeBtn.Text = ScrollingFrame.Visible and "-" or "+"
 end)
-safeBindClick(CloseBtn, function() MainFrame.Visible = false end)
+safeBindClick(CloseBtn, function()
+    TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    task.wait(0.2)
+    MainFrame.Visible = false
+end)
 
 local UIGridLayout = Instance.new("UIGridLayout", ScrollingFrame)
 UIGridLayout.CellSize = UDim2.new(0.485, 0, 0, 44) UIGridLayout.CellPadding = UDim2.new(0.03, 0, 0, 10)
@@ -342,6 +408,14 @@ local function CreateStaffButton(text, order, initialActive)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     local grad = Instance.new("UIGradient", btn) grad.Color = initialActive and ON_GRADIENT or OFF_GRADIENT grad.Rotation = 90
     local stroke = Instance.new("UIStroke", btn) stroke.Thickness = 1.5 stroke.Color = initialActive and Color3.fromRGB(0, 255, 200) or Color3.fromRGB(70, 70, 95)
+    
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {Size = btn.Size + UDim2.new(0, 4, 0, 2)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {Size = UDim2.new(0.485, 0, 0, 44)}):Play()
+    end)
+
     return btn, stroke, grad
 end
 
@@ -512,7 +586,7 @@ Connections.SpeedLock = RunService.Heartbeat:Connect(function()
 end)
 
 --------------------------------------------------------------------------------
--- HUB BUTTON BINDINGS
+-- HUB BUTTON BINDINGS (WITH THE_RAKE ESP)
 --------------------------------------------------------------------------------
 local FlyBtn, FlyStroke, FlyGrad = CreateStaffButton("🦅 FLY HACK: OFF", 1, false)
 local InfJumpBtn, InfJumpStroke, InfJumpGrad = CreateStaffButton("🦘 INFINITE JUMP LOOP: OFF", 2, false)
@@ -543,9 +617,101 @@ local AutoInteractBtn, AutoInteractStroke, AutoInteractGrad = CreateStaffButton(
 local AutoMiscSoulsBtn, AutoMiscSoulsStroke, AutoMiscSoulsGrad = CreateStaffButton("👻 AUTO FARM SOULS (Workspace.Misc): OFF", 25, false)
 local AutoFarmRakoofBtn, AutoFarmRakoofStroke, AutoFarmRakoofGrad = CreateStaffButton("👹 AUTO FARM RAKOOF (TOP + CLICK): OFF", 26, false)
 
+local GodModeBtn, GodModeStroke, GodModeGrad = CreateStaffButton("🛡️ GOD MODE HEAL LOOP: OFF", 27, false)
+local AntiFlingBtn, AntiFlingStroke, AntiFlingGrad = CreateStaffButton("🌀 ANTI-FLING PROTECTION: OFF", 28, false)
+local PlayerESPBtn, PlayerESPStroke, PlayerESPGrad = CreateStaffButton("👁️ PLAYER HIGHLIGHT ESP: OFF", 29, false)
+local RakeESPBtn, RakeESPStroke, RakeESPGrad = CreateStaffButton("🚨 THE_RAKE ESP: OFF", 30, false)
+
 --------------------------------------------------------------------------------
--- FEATURE LOGIC
+-- FEATURE LOGIC (INCLUDING THE_RAKE ESP)
 --------------------------------------------------------------------------------
+
+safeBindClick(RakeESPBtn, function()
+    Features.RakeESP = not Features.RakeESP
+    updateStateUI(RakeESPBtn, RakeESPStroke, RakeESPGrad, Features.RakeESP, "🚨 THE_RAKE ESP: ON", "🚨 THE_RAKE ESP: OFF")
+    
+    if not Features.RakeESP then
+        local rakeModel, _ = findTargetModel(RAKE_NAME)
+        if rakeModel then
+            local hl = rakeModel:FindFirstChild("SharkHubRakeESP")
+            if hl then hl:Destroy() end
+        end
+    end
+end)
+
+Connections.RakeESPRunner = RunService.RenderStepped:Connect(function()
+    if Features.RakeESP then
+        local rakeModel, _ = findTargetModel(RAKE_NAME)
+        if not rakeModel then rakeModel, _ = findTargetModel(TARGET_NAME) end
+        
+        if rakeModel then
+            local hl = rakeModel:FindFirstChild("SharkHubRakeESP")
+            if not hl then
+                hl = Instance.new("Highlight")
+                hl.Name = "SharkHubRakeESP"
+                hl.FillColor = Color3.fromRGB(255, 0, 0)
+                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                hl.FillTransparency = 0.4
+                hl.Parent = rakeModel
+            end
+        end
+    end
+end)
+
+safeBindClick(GodModeBtn, function()
+    Features.GodMode = not Features.GodMode
+    updateStateUI(GodModeBtn, GodModeStroke, GodModeGrad, Features.GodMode, "🛡️ GOD MODE HEAL LOOP: ON", "🛡️ GOD MODE HEAL LOOP: OFF")
+    if Tasks.GodMode then task.cancel(Tasks.GodMode) Tasks.GodMode = nil end
+    if Features.GodMode then
+        Tasks.GodMode = task.spawn(function()
+            while Features.GodMode do
+                local char = LocalPlayer.Character
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if hum then hum.Health = hum.MaxHealth end
+                task.wait(0.2)
+            end
+        end)
+    end
+end)
+
+safeBindClick(AntiFlingBtn, function()
+    Features.AntiFling = not Features.AntiFling
+    updateStateUI(AntiFlingBtn, AntiFlingStroke, AntiFlingGrad, Features.AntiFling, "🌀 ANTI-FLING PROTECTION: ON", "🌀 ANTI-FLING PROTECTION: OFF")
+    if Connections.AntiFling then Connections.AntiFling:Disconnect() Connections.AntiFling = nil end
+    if Features.AntiFling then
+        Connections.AntiFling = RunService.Stepped:Connect(function()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
+                hrp.AssemblyAngularVelocity = Vector3.zero
+            end
+        end)
+    end
+end)
+
+safeBindClick(PlayerESPBtn, function()
+    Features.PlayerESP = not Features.PlayerESP
+    updateStateUI(PlayerESPBtn, PlayerESPStroke, PlayerESPGrad, Features.PlayerESP, "👁️ PLAYER HIGHLIGHT ESP: ON", "👁️ PLAYER HIGHLIGHT ESP: OFF")
+    if Features.PlayerESP then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local hl = p.Character:FindFirstChild("SharkHubESP") or Instance.new("Highlight")
+                hl.Name = "SharkHubESP"
+                hl.FillColor = Color3.fromRGB(0, 255, 200)
+                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                hl.Parent = p.Character
+            end
+        end
+    else
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then
+                local hl = p.Character:FindFirstChild("SharkHubESP")
+                if hl then hl:Destroy() end
+            end
+        end
+    end
+end)
 
 safeBindClick(AutoMiscSoulsBtn, function()
     Features.AutoMiscSouls = not Features.AutoMiscSouls
